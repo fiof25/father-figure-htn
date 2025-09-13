@@ -90,7 +90,6 @@ Object.assign(img.style, {
   zIndex: "9999",
   pointerEvents: "auto", // Enable clicks
   cursor: "pointer",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
   transition: "all 0.3s ease"
 });
 
