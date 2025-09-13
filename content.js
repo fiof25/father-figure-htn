@@ -95,11 +95,51 @@ Object.assign(img.style, {
 
 // Add hover effect
 img.addEventListener('mouseenter', function() {
-  img.style.transform = 'scale(1.1)';
+  if (!isDragging) {
+    img.style.transform = 'scale(1.1)';
+  }
 });
 
 img.addEventListener('mouseleave', function() {
-  img.style.transform = 'scale(1)';
+  if (!isDragging) {
+    img.style.transform = 'scale(1)';
+  }
+});
+
+// Dragging functionality
+let isDragging = false;
+let startX = 0;
+let startLeft = 0;
+
+img.addEventListener('mousedown', function(e) {
+  if (e.button === 0) { // Left mouse button only
+    isDragging = true;
+    startX = e.clientX;
+    startLeft = parseInt(window.getComputedStyle(img).right);
+    img.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('mousemove', function(e) {
+  if (isDragging) {
+    const deltaX = startX - e.clientX; // Reversed for right positioning
+    const newRight = startLeft + deltaX;
+    
+    // Constrain to screen bounds (with some padding)
+    const maxRight = window.innerWidth - parseInt(img.style.width) - 10;
+    const minRight = 10;
+    
+    const constrainedRight = Math.max(minRight, Math.min(maxRight, newRight));
+    img.style.right = constrainedRight + 'px';
+  }
+});
+
+document.addEventListener('mouseup', function() {
+  if (isDragging) {
+    isDragging = false;
+    img.style.cursor = 'pointer';
+  }
 });
 
 // Create options overlay
@@ -175,57 +215,59 @@ function showMessage(text, messageDiv) {
   }, 5000);
 }
 
-// Click handler for the logo
-img.addEventListener('click', function() {
-  // Wake up Bill when clicked
-  wakeUp();
-  
-  let existingOverlay = document.getElementById('father-figure-options');
-  
-  if (existingOverlay) {
-    // Close overlay and go back to sleep
-    existingOverlay.style.transform = 'scale(0)';
-    setTimeout(() => {
-      existingOverlay.remove();
-      // Go back to sleep after overlay closes
-      setTimeout(() => goToSleep(), 1000);
-    }, 300);
-  } else {
-    // Create and show overlay
-    const overlay = createOptionsOverlay();
-    document.body.appendChild(overlay);
+// Click handler for the logo (only trigger if not dragging)
+img.addEventListener('click', function(e) {
+  if (!isDragging) {
+    // Wake up Bill when clicked
+    wakeUp();
     
-    // Animate in
-    setTimeout(() => {
-      overlay.style.transform = 'scale(1)';
-    }, 10);
+    let existingOverlay = document.getElementById('father-figure-options');
     
-    // Add event listeners
-    const messageDiv = overlay.querySelector('#ff-message');
-    
-    overlay.querySelector('#ff-cheer').addEventListener('click', function() {
-      const randomMessage = cheerMessages[Math.floor(Math.random() * cheerMessages.length)];
-      showMessage(randomMessage, messageDiv);
-    });
-    
-    overlay.querySelector('#ff-advice').addEventListener('click', function() {
-      const randomMessage = adviceMessages[Math.floor(Math.random() * adviceMessages.length)];
-      showMessage(randomMessage, messageDiv);
-    });
-    
-    overlay.querySelector('#ff-motivation').addEventListener('click', function() {
-      const randomMessage = motivationMessages[Math.floor(Math.random() * motivationMessages.length)];
-      showMessage(randomMessage, messageDiv);
-    });
-    
-    overlay.querySelector('#ff-close').addEventListener('click', function() {
-      overlay.style.transform = 'scale(0)';
+    if (existingOverlay) {
+      // Close overlay and go back to sleep
+      existingOverlay.style.transform = 'scale(0)';
       setTimeout(() => {
-        overlay.remove();
+        existingOverlay.remove();
         // Go back to sleep after overlay closes
         setTimeout(() => goToSleep(), 1000);
       }, 300);
-    });
+    } else {
+      // Create and show overlay
+      const overlay = createOptionsOverlay();
+      document.body.appendChild(overlay);
+      
+      // Animate in
+      setTimeout(() => {
+        overlay.style.transform = 'scale(1)';
+      }, 10);
+      
+      // Add event listeners
+      const messageDiv = overlay.querySelector('#ff-message');
+      
+      overlay.querySelector('#ff-cheer').addEventListener('click', function() {
+        const randomMessage = cheerMessages[Math.floor(Math.random() * cheerMessages.length)];
+        showMessage(randomMessage, messageDiv);
+      });
+      
+      overlay.querySelector('#ff-advice').addEventListener('click', function() {
+        const randomMessage = adviceMessages[Math.floor(Math.random() * adviceMessages.length)];
+        showMessage(randomMessage, messageDiv);
+      });
+      
+      overlay.querySelector('#ff-motivation').addEventListener('click', function() {
+        const randomMessage = motivationMessages[Math.floor(Math.random() * motivationMessages.length)];
+        showMessage(randomMessage, messageDiv);
+      });
+      
+      overlay.querySelector('#ff-close').addEventListener('click', function() {
+        overlay.style.transform = 'scale(0)';
+        setTimeout(() => {
+          overlay.remove();
+          // Go back to sleep after overlay closes
+          setTimeout(() => goToSleep(), 1000);
+        }, 300);
+      });
+    }
   }
 });
 
