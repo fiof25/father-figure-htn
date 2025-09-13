@@ -185,14 +185,18 @@ function createOptionsOverlay() {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap');
     
-    * {
+    #father-figure-options * {
       font-family: 'Kode Mono', monospace !important;
       font-optical-sizing: auto;
       font-weight: 500;
       letter-spacing: -0.5px;
     }
     
-    button, h3, p, div, span {
+    #father-figure-options button, 
+    #father-figure-options h3, 
+    #father-figure-options p, 
+    #father-figure-options div, 
+    #father-figure-options span {
       font-family: 'Kode Mono', monospace !important;
     }
   </style>
