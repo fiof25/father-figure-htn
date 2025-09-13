@@ -61,22 +61,6 @@ function changeFatherFigure(figure) {
 
 // Initialize the popup
 document.addEventListener('DOMContentLoaded', function() {
-  // Set up message buttons
-  document.getElementById('cheer').addEventListener('click', function() {
-    const randomMessage = cheerMessages[Math.floor(Math.random() * cheerMessages.length)];
-    showMessage(randomMessage);
-  });
-  
-  document.getElementById('advice').addEventListener('click', function() {
-    const randomMessage = adviceMessages[Math.floor(Math.random() * adviceMessages.length)];
-    showMessage(randomMessage);
-  });
-  
-  document.getElementById('motivation').addEventListener('click', function() {
-    const randomMessage = motivationMessages[Math.floor(Math.random() * motivationMessages.length)];
-    showMessage(randomMessage);
-  });
-
   // Set up character selection
   const characterOptions = document.querySelectorAll('.character-option');
   characterOptions.forEach(option => {

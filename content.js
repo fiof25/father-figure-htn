@@ -43,6 +43,8 @@ let dadSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
 
 // Function to update character images
 function updateCharacter(figure) {
+  console.log('Updating character to:', figure);
+  
   if (figure === 1) {
     dadSleep1Src = chrome.runtime.getURL("assets/newbill1.png");
     dadSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
@@ -54,25 +56,21 @@ function updateCharacter(figure) {
     dadSleep2Src = chrome.runtime.getURL("assets/chang.png");
   }
   
+  console.log('New dadSleep1Src:', dadSleep1Src);
+  
   // Update the image if it exists
   if (img) {
+    // If awake, show the logo, otherwise show the appropriate sleep image
     img.src = isAwake ? logoSrc : dadSleep1Src;
+    console.log('Updated img.src to:', img.src);
+    
+    // Make sure the sleep animation is running if we're not awake
+    if (!isAwake) {
+      clearInterval(sleepInterval);
+      startSleepAnimation();
+    }
   }
 }
-
-// Load saved character preference
-chrome.storage.local.get(['fatherFigure'], function(result) {
-  const figure = result.fatherFigure || 1; // Default to 1 if not set
-  updateCharacter(figure);
-});
-
-// Listen for changes to the character preference
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.fatherFigure) {
-    updateCharacter(changes.fatherFigure.newValue);
-  }
-});
-
 
 // Function to update character based on storage
 function updateCharacterFromStorage() {
@@ -204,7 +202,7 @@ document.addEventListener('mouseup', function() {
 });
 
 // Create options overlay
-function createOptionsOverlay() {
+function createOptionsOverlay(callback) {
   const overlay = document.createElement('div');
   overlay.id = 'father-figure-options';
   
@@ -233,31 +231,40 @@ function createOptionsOverlay() {
     transition: 'all 0.3s ease'
   });
 
-  overlay.innerHTML = `
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap');
+  // Get current character info
+  chrome.storage.local.get(['fatherFigure'], function(result) {
+    const figure = result.fatherFigure || 1;
+    const characterNames = ['Bill', 'Dave', 'Chang'];
+    const characterGreetings = ['What\'s up kiddo?', 'Hey there, sport!', 'How\'s it going, champ?'];
     
-    #father-figure-options * {
-      font-family: 'Kode Mono', monospace !important;
-      font-optical-sizing: auto;
-      font-weight: 500;
-      letter-spacing: -0.5px;
-    }
-    
-    #father-figure-options button, 
-    #father-figure-options h3, 
-    #father-figure-options p, 
-    #father-figure-options div, 
-    #father-figure-options span {
-      font-family: 'Kode Mono', monospace !important;
-    }
-  </style>
+    const currentName = characterNames[figure - 1];
+    const currentGreeting = characterGreetings[figure - 1];
 
-  <div style="padding-right: 150px;">
-    <div style="text-align: center; margin-bottom: 15px;">
-      <h3 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">Bill</h3>
-      <p style="margin: 0; font-size: 12px; opacity: 0.8;">What's up kiddo?</p>
-    </div>
+    overlay.innerHTML = `
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap');
+      
+      #father-figure-options * {
+        font-family: 'Kode Mono', monospace !important;
+        font-optical-sizing: auto;
+        font-weight: 500;
+        letter-spacing: -0.5px;
+      }
+      
+      #father-figure-options button, 
+      #father-figure-options h3, 
+      #father-figure-options p, 
+      #father-figure-options div, 
+      #father-figure-options span {
+        font-family: 'Kode Mono', monospace !important;
+      }
+    </style>
+
+    <div style="padding-right: 150px;">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <h3 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">${currentName}</h3>
+        <p style="margin: 0; font-size: 12px; opacity: 0.8;">${currentGreeting}</p>
+      </div>
     
     <div style="position: relative; display: inline-block; width: 200px;" id="ff-cheer">
   <!-- Image -->
@@ -332,21 +339,23 @@ function createOptionsOverlay() {
     <div id="ff-message" style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; min-height: 20px; font-size: 12px; line-height: 1.4; display: none;"></div>
   </div>`;
 
-  // Add button hover effects
-  const buttons = overlay.querySelectorAll('button');
-  buttons.forEach(button => {
-    button.addEventListener('mouseenter', function() {
-      this.style.background = 'rgba(255,255,255,0.3)';
-      this.style.transform = 'translateY(-2px)';
+    // Add button hover effects
+    const buttons = overlay.querySelectorAll('button');
+    buttons.forEach(button => {
+      button.addEventListener('mouseenter', function() {
+        this.style.background = 'rgba(255,255,255,0.3)';
+        this.style.transform = 'translateY(-2px)';
+      });
+      
+      button.addEventListener('mouseleave', function() {
+        this.style.background = button.id === 'ff-close' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)';
+        this.style.transform = 'translateY(0)';
+      });
     });
     
-    button.addEventListener('mouseleave', function() {
-      this.style.background = button.id === 'ff-close' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)';
-      this.style.transform = 'translateY(0)';
-    });
+    // Call the callback with the completed overlay
+    if (callback) callback(overlay);
   });
-
-  return overlay;
 }
 
 // Show message function
@@ -376,39 +385,40 @@ img.addEventListener('click', function(e) {
       }, 300);
     } else {
       // Create and show overlay
-      const overlay = createOptionsOverlay();
-      document.body.appendChild(overlay);
-      
-      // Animate in
-      setTimeout(() => {
-        overlay.style.transform = 'scale(1)';
-      }, 10);
-      
-      // Add event listeners
-      const messageDiv = overlay.querySelector('#ff-message');
-      
-      overlay.querySelector('#ff-cheer').addEventListener('click', function() {
-        const randomMessage = cheerMessages[Math.floor(Math.random() * cheerMessages.length)];
-        showMessage(randomMessage, messageDiv);
-      });
-      
-      overlay.querySelector('#ff-advice').addEventListener('click', function() {
-        const randomMessage = adviceMessages[Math.floor(Math.random() * adviceMessages.length)];
-        showMessage(randomMessage, messageDiv);
-      });
-      
-      overlay.querySelector('#ff-motivation').addEventListener('click', function() {
-        const randomMessage = motivationMessages[Math.floor(Math.random() * motivationMessages.length)];
-        showMessage(randomMessage, messageDiv);
-      });
-      
-      overlay.querySelector('#ff-close').addEventListener('click', function() {
-        overlay.style.transform = 'scale(0)';
+      createOptionsOverlay(function(overlay) {
+        document.body.appendChild(overlay);
+        
+        // Animate in
         setTimeout(() => {
-          overlay.remove();
-          // Go back to sleep after overlay closes
-          setTimeout(() => goToSleep(), 1000);
-        }, 300);
+          overlay.style.transform = 'scale(1)';
+        }, 10);
+        
+        // Add event listeners
+        const messageDiv = overlay.querySelector('#ff-message');
+        
+        overlay.querySelector('#ff-cheer').addEventListener('click', function() {
+          const randomMessage = cheerMessages[Math.floor(Math.random() * cheerMessages.length)];
+          showMessage(randomMessage, messageDiv);
+        });
+        
+        overlay.querySelector('#ff-advice').addEventListener('click', function() {
+          const randomMessage = adviceMessages[Math.floor(Math.random() * adviceMessages.length)];
+          showMessage(randomMessage, messageDiv);
+        });
+        
+        overlay.querySelector('#ff-motivation').addEventListener('click', function() {
+          const randomMessage = motivationMessages[Math.floor(Math.random() * motivationMessages.length)];
+          showMessage(randomMessage, messageDiv);
+        });
+        
+        overlay.querySelector('#ff-close').addEventListener('click', function() {
+          overlay.style.transform = 'scale(0)';
+          setTimeout(() => {
+            overlay.remove();
+            // Go back to sleep after overlay closes
+            setTimeout(() => goToSleep(), 1000);
+          }, 300);
+        });
       });
     }
   }
