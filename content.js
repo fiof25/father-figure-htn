@@ -87,7 +87,7 @@ Object.assign(img.style, {
   right: "20px",
   width: "170px",
   height: "170px",
-  zIndex: "9999",
+  zIndex: "9998",
   pointerEvents: "auto", // Enable clicks
   cursor: "pointer",
   transition: "all 0.3s ease"
@@ -132,6 +132,15 @@ document.addEventListener('mousemove', function(e) {
     
     const constrainedRight = Math.max(minRight, Math.min(maxRight, newRight));
     img.style.right = constrainedRight + 'px';
+    
+    // Update overlay position to maintain relative position to icon
+    const overlay = document.getElementById('father-figure-options');
+    if (overlay) {
+      // Calculate the overlay's new position based on icon's movement
+      const iconRight = parseInt(img.style.right) || 20;
+      const overlayRight = Math.max(10, Math.min(window.innerWidth - 400 - 10, iconRight));
+      overlay.style.right = overlayRight + 'px';
+    }
   }
 });
 
@@ -147,16 +156,23 @@ function createOptionsOverlay() {
   const overlay = document.createElement('div');
   overlay.id = 'father-figure-options';
   
+  // Calculate initial position based on icon's position
+  const iconRight = parseInt(window.getComputedStyle(img).right) || 20;
+  const overlayWidth = 400; // Match the width from the style below
+  const minRight = 10;
+  const maxRight = window.innerWidth - overlayWidth - 10;
+  const initialOverlayRight = Math.max(minRight, Math.min(maxRight, iconRight));
+  
   Object.assign(overlay.style, {
     position: 'fixed',
-    bottom: '140px',
-    right: '20px',
-    width: '280px',
+    bottom: '0px',
+    right: initialOverlayRight + 'px',
+    width: '400px',
     padding: '20px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: '#3F5678',
     borderRadius: '15px',
     boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-    zIndex: '10000',
+    zIndex: '8888',
     color: 'white',
     fontFamily: 'Arial, sans-serif',
     fontSize: '14px',
@@ -166,28 +182,99 @@ function createOptionsOverlay() {
   });
 
   overlay.innerHTML = `
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap');
+    
+    * {
+      font-family: 'Kode Mono', monospace !important;
+      font-optical-sizing: auto;
+      font-weight: 500;
+      letter-spacing: -0.5px;
+    }
+    
+    button, h3, p, div, span {
+      font-family: 'Kode Mono', monospace !important;
+    }
+  </style>
+
+  <div style="padding-right: 150px;">
     <div style="text-align: center; margin-bottom: 15px;">
-      <h3 style="margin: 0 0 5px 0; font-size: 16px;">Father Figure</h3>
-      <p style="margin: 0; font-size: 12px; opacity: 0.8;">What do you need today?</p>
+      <h3 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">Bill</h3>
+      <p style="margin: 0; font-size: 12px; opacity: 0.8;">What's up kiddo?</p>
     </div>
     
+    <div style="position: relative; display: inline-block; width: 200px;" id="ff-cheer">
+  <!-- Image -->
+  <img src="${chrome.runtime.getURL('assets/button.png')}" 
+       style="width: 100%; object-fit: contain;">
+
+  <!-- Text -->
+  <span style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      pointer-events: none;
+      font-family: 'Kode Mono', monospace;
+  ">
+    🎉 Cheer Me On
+  </span>
+</div>
+<div style="position: relative; display: inline-block; width: 200px;" id="ff-advice">
+  <!-- Image -->
+  <img src="${chrome.runtime.getURL('assets/button.png')}" 
+       style="width: 100%; object-fit: contain;">
+
+  <!-- Text -->
+  <span style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      pointer-events: none;
+      font-family: 'Kode Mono', monospace;
+  ">
+    💡 Give Me Advice
+  </span>
+</div>
+<div style="position: relative; display: inline-block; width: 200px;" id="ff-motivation">
+  <!-- Image -->
+  <img src="${chrome.runtime.getURL('assets/button.png')}" 
+       style="width: 100%; object-fit: contain;">
+
+  <!-- Text -->
+  <span style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      pointer-events: none;
+      font-family: 'Kode Mono', monospace;
+  ">
+    💪 Motivate Me
+  </span>
+</div>
     <div style="display: flex; flex-direction: column; gap: 8px;">
-      <button id="ff-cheer" style="padding: 12px; border: none; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 13px; transition: all 0.3s ease;">
-        🎉 Cheer Me On
-      </button>
-      <button id="ff-advice" style="padding: 12px; border: none; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 13px; transition: all 0.3s ease;">
-        💡 Give Me Advice
-      </button>
-      <button id="ff-motivation" style="padding: 12px; border: none; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 13px; transition: all 0.3s ease;">
-        💪 Motivate Me
-      </button>
+     
       <button id="ff-close" style="padding: 8px; border: none; border-radius: 8px; background: rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
         Close
       </button>
     </div>
     
     <div id="ff-message" style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; min-height: 20px; font-size: 12px; line-height: 1.4; display: none;"></div>
-  `;
+  </div>`;
 
   // Add button hover effects
   const buttons = overlay.querySelectorAll('button');
