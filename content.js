@@ -225,7 +225,7 @@ function createOptionsOverlay() {
       pointer-events: none;
       font-family: 'Kode Mono', monospace;
   ">
-    🎉 Cheer Me On
+    🎉 Cheer Me Up
   </span>
 </div>
 <div style="position: relative; display: inline-block; width: 200px;" id="ff-advice">
