@@ -35,20 +35,61 @@ const motivationMessages = [
 // 1. Create the image element
 const img = document.createElement("img");
 
-// 2. Set the image source dynamically using chrome.runtime.getURL
-img.src = chrome.runtime.getURL("assets/Logo.png");
+// 2. Set up image sources
+const logoSrc = chrome.runtime.getURL("assets/Logo.png");
+const billSleep1Src = chrome.runtime.getURL("assets/newbill1.png");
+const billSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
+
+// 3. Start with bill sleep 1 (idle state)
+img.src = billSleep1Src;
+
+// 4. Set up sleep animation (alternates between billsleep1 and billsleep2 every 2 seconds)
+let isAwake = false;
+let sleepFrame = 1;
+let sleepInterval;
+
+function startSleepAnimation() {
+  if (!isAwake) {
+    sleepInterval = setInterval(() => {
+      if (!isAwake) {
+        sleepFrame = sleepFrame === 1 ? 2 : 1;
+        img.src = sleepFrame === 1 ? billSleep1Src : billSleep2Src;
+      }
+    }, 2000);
+  }
+}
+
+function wakeUp() {
+  isAwake = true;
+  if (sleepInterval) {
+    clearInterval(sleepInterval);
+  }
+  img.src = logoSrc;
+  // Resize logo specifically
+  img.style.width = "190px";
+  img.style.height = "190px";
+}
+
+function goToSleep() {
+  isAwake = false;
+  sleepFrame = 1;
+  img.src = billSleep1Src;
+  // Resize sleep images specifically
+  img.style.width = "160px";
+  img.style.height = "160px";
+  startSleepAnimation();
+}
 
 // 3. Style it to stay at the bottom-right and make it clickable
 Object.assign(img.style, {
   position: "fixed",
-  bottom: "20px",
+  bottom: "0px",
   right: "20px",
-  width: "100px",
-  height: "100px",
+  width: "170px",
+  height: "170px",
   zIndex: "9999",
   pointerEvents: "auto", // Enable clicks
   cursor: "pointer",
-  borderRadius: "50%",
   boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
   transition: "all 0.3s ease"
 });
@@ -137,12 +178,19 @@ function showMessage(text, messageDiv) {
 
 // Click handler for the logo
 img.addEventListener('click', function() {
+  // Wake up Bill when clicked
+  wakeUp();
+  
   let existingOverlay = document.getElementById('father-figure-options');
   
   if (existingOverlay) {
-    // Close overlay
+    // Close overlay and go back to sleep
     existingOverlay.style.transform = 'scale(0)';
-    setTimeout(() => existingOverlay.remove(), 300);
+    setTimeout(() => {
+      existingOverlay.remove();
+      // Go back to sleep after overlay closes
+      setTimeout(() => goToSleep(), 1000);
+    }, 300);
   } else {
     // Create and show overlay
     const overlay = createOptionsOverlay();
@@ -173,7 +221,11 @@ img.addEventListener('click', function() {
     
     overlay.querySelector('#ff-close').addEventListener('click', function() {
       overlay.style.transform = 'scale(0)';
-      setTimeout(() => overlay.remove(), 300);
+      setTimeout(() => {
+        overlay.remove();
+        // Go back to sleep after overlay closes
+        setTimeout(() => goToSleep(), 1000);
+      }, 300);
     });
   }
 });
@@ -191,7 +243,13 @@ function addLogoToPage() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', addLogoToPage);
+  document.addEventListener('DOMContentLoaded', function() {
+    addLogoToPage();
+    // Start sleep animation after logo is added
+    setTimeout(() => startSleepAnimation(), 1000);
+  });
 } else {
   addLogoToPage();
+  // Start sleep animation after logo is added
+  setTimeout(() => startSleepAnimation(), 1000);
 }
