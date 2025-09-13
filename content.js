@@ -37,11 +37,63 @@ const img = document.createElement("img");
 
 // 2. Set up image sources
 const logoSrc = chrome.runtime.getURL("assets/Logo.png");
-const billSleep1Src = chrome.runtime.getURL("assets/newbill1.png");
-const billSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
+
+let dadSleep1Src = chrome.runtime.getURL("assets/newbill1.png");
+let dadSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
+
+// Function to update character images
+function updateCharacter(figure) {
+  if (figure === 1) {
+    dadSleep1Src = chrome.runtime.getURL("assets/newbill1.png");
+    dadSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
+  } else if (figure === 2) {
+    dadSleep1Src = chrome.runtime.getURL("assets/dave.png");
+    dadSleep2Src = chrome.runtime.getURL("assets/dave.png");
+  } else if (figure === 3) {
+    dadSleep1Src = chrome.runtime.getURL("assets/chang.png");
+    dadSleep2Src = chrome.runtime.getURL("assets/chang.png");
+  }
+  
+  // Update the image if it exists
+  if (img) {
+    img.src = isAwake ? logoSrc : dadSleep1Src;
+  }
+}
+
+// Load saved character preference
+chrome.storage.local.get(['fatherFigure'], function(result) {
+  const figure = result.fatherFigure || 1; // Default to 1 if not set
+  updateCharacter(figure);
+});
+
+// Listen for changes to the character preference
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'local' && changes.fatherFigure) {
+    updateCharacter(changes.fatherFigure.newValue);
+  }
+});
+
+
+// Function to update character based on storage
+function updateCharacterFromStorage() {
+  chrome.storage.local.get(['fatherFigure'], function(result) {
+    const figure = result.fatherFigure || 1;
+    updateCharacter(figure);
+  });
+}
+
+// Listen for storage changes from other tabs
+chrome.storage.onChanged.addListener(function(changes, areaName) {
+  if (areaName === 'local' && changes.fatherFigure) {
+    updateCharacter(changes.fatherFigure.newValue);
+  }
+});
+
+// Initialize character from storage
+updateCharacterFromStorage();
 
 // 3. Start with bill sleep 1 (idle state)
-img.src = billSleep1Src;
+// img.src will be set by updateCharacterFromStorage
 
 // 4. Set up sleep animation (alternates between billsleep1 and billsleep2 every 2 seconds)
 let isAwake = false;
@@ -53,7 +105,7 @@ function startSleepAnimation() {
     sleepInterval = setInterval(() => {
       if (!isAwake) {
         sleepFrame = sleepFrame === 1 ? 2 : 1;
-        img.src = sleepFrame === 1 ? billSleep1Src : billSleep2Src;
+        img.src = sleepFrame === 1 ? dadSleep1Src : dadSleep2Src;
       }
     }, 2000);
   }
@@ -73,7 +125,7 @@ function wakeUp() {
 function goToSleep() {
   isAwake = false;
   sleepFrame = 1;
-  img.src = billSleep1Src;
+  img.src = dadSleep1Src;
   // Resize sleep images specifically
   img.style.width = "160px";
   img.style.height = "160px";

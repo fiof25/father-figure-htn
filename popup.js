@@ -43,8 +43,25 @@ function showMessage(text) {
   }, 5000);
 }
 
-// Event listeners
+// Change the father figure and update UI
+function changeFatherFigure(figure) {
+  // Save the selection
+  chrome.storage.local.set({ fatherFigure: figure }, function() {
+    // Update UI to show selected character
+    document.querySelectorAll('.character-option').forEach(option => {
+      option.classList.remove('selected');
+    });
+    document.getElementById(`character-${['bill', 'dave', 'chang'][figure-1]}`).classList.add('selected');
+    
+    // Show confirmation message
+    const names = ['Bill', 'Dave', 'Chang'];
+    showMessage(`Switched to ${names[figure-1]}!`);
+  });
+}
+
+// Initialize the popup
 document.addEventListener('DOMContentLoaded', function() {
+  // Set up message buttons
   document.getElementById('cheer').addEventListener('click', function() {
     const randomMessage = cheerMessages[Math.floor(Math.random() * cheerMessages.length)];
     showMessage(randomMessage);
@@ -58,5 +75,23 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('motivation').addEventListener('click', function() {
     const randomMessage = motivationMessages[Math.floor(Math.random() * motivationMessages.length)];
     showMessage(randomMessage);
+  });
+
+  // Set up character selection
+  const characterOptions = document.querySelectorAll('.character-option');
+  characterOptions.forEach(option => {
+    option.addEventListener('click', function() {
+      const figure = parseInt(this.getAttribute('data-character'));
+      changeFatherFigure(figure);
+    });
+  });
+
+  // Load current selection
+  chrome.storage.local.get(['fatherFigure'], function(result) {
+    const figure = result.fatherFigure || 1; // Default to Bill (1)
+    document.querySelectorAll('.character-option').forEach(option => {
+      option.classList.remove('selected');
+    });
+    document.getElementById(`character-${['bill', 'dave', 'chang'][figure-1]}`)?.classList.add('selected');
   });
 });

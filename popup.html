@@ -46,6 +46,45 @@
       transform: translateY(-2px);
     }
     
+    .character-selection {
+      margin: 15px 0;
+      text-align: center;
+    }
+    
+    .character-option {
+      display: inline-block;
+      margin: 5px;
+      text-align: center;
+      cursor: pointer;
+      padding: 10px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .character-option:hover {
+      background: rgba(255,255,255,0.2);
+      transform: translateY(-2px);
+    }
+    
+    .character-option.selected {
+      background: rgba(255,255,255,0.3);
+      box-shadow: 0 0 0 2px white;
+    }
+    
+    .character-option img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-bottom: 5px;
+    }
+    
+    .character-option span {
+      display: block;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    
     .message {
       margin-top: 15px;
       padding: 15px;
@@ -59,16 +98,29 @@
 </head>
 <body>
   <div class="header">
-    <h1>👨‍👧‍👦 Father Figure</h1>
-    <p>Your supportive companion</p>
+    <h1>Father Figure</h1>
+    <p>Your personal motivational companion</p>
   </div>
   
-  <button id="cheer" class="button">🎉 Cheer Me On</button>
-  <button id="advice" class="button">💡 Give Me Advice</button>
-  <button id="motivation" class="button">💪 Motivate Me</button>
+  <div class="character-selection">
+    <div class="character-option" data-character="1" id="character-bill">
+      <img src="assets/newbill1.png" alt="Bill">
+      <span>Bill</span>
+    </div>
+    <div class="character-option" data-character="2" id="character-dave">
+      <img src="assets/dave.png" alt="Dave">
+      <span>Dave</span>
+    </div>
+    <div class="character-option" data-character="3" id="character-chang">
+      <img src="assets/chang.png" alt="Chang">
+      <span>Chang</span>
+    </div>
+  </div>
+  
   
   <div id="message" class="message"></div>
   
   <script src="popup.js"></script>
+  
 </body>
 </html>
