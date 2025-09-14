@@ -1858,6 +1858,10 @@ img.addEventListener('click', function(e) {
             recognition.onresult = function(event) {
               const transcript = event.results[0][0].transcript;
               chatInput.value = transcript;
+              // Automatically send the message after speech recognition
+              setTimeout(() => {
+                sendMessage();
+              }, 500); // Small delay to ensure the input is populated
             };
 
             recognition.onend = function() {
@@ -1871,6 +1875,19 @@ img.addEventListener('click', function(e) {
               isRecording = false;
               voiceInput.textContent = '🎤';
               voiceInput.style.background = 'rgba(255,255,255,0.2)';
+              
+              // Handle specific error types
+              if (event.error === 'no-speech') {
+                addChatMessage('Dad', 'I didn\'t hear anything, kiddo. Try speaking a bit louder or closer to the microphone.');
+              } else if (event.error === 'audio-capture') {
+                addChatMessage('Dad', 'Having trouble with your microphone, sport. Check your mic permissions.');
+              } else if (event.error === 'not-allowed') {
+                addChatMessage('Dad', 'Looks like I need microphone permission to hear you, kiddo. Check your browser settings.');
+              } else if (event.error === 'network') {
+                addChatMessage('Dad', 'Network hiccup there, champ. Try again in a moment.');
+              } else {
+                addChatMessage('Dad', `Having some trouble with voice recognition: ${event.error}. Try typing instead!`);
+              }
             };
 
             recognition.start();
