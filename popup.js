@@ -59,6 +59,30 @@ function changeFatherFigure(figure) {
   });
 }
 
+// Function to trigger dad joke in active tab
+function triggerDadJokeInTab() {
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    if (tabs[0]) {
+      chrome.scripting.executeScript({
+        target: {tabId: tabs[0].id},
+        function: () => {
+          if (window.triggerDadJoke) {
+            window.triggerDadJoke(true); // Force joke
+          }
+        }
+      });
+      
+      // Show feedback in popup
+      showMessage("Dad is telling you a joke! 😄");
+      
+      // Close popup after triggering
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+    }
+  });
+}
+
 // Initialize the popup
 document.addEventListener('DOMContentLoaded', function() {
   // Set up character selection
@@ -69,6 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
       changeFatherFigure(figure);
     });
   });
+
+  // Set up dad joke button
+  const dadJokeBtn = document.getElementById('dad-joke-btn');
+  if (dadJokeBtn) {
+    dadJokeBtn.addEventListener('click', triggerDadJokeInTab);
+  }
 
   // Load current selection
   chrome.storage.local.get(['fatherFigure'], function(result) {
