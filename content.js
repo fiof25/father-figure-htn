@@ -209,7 +209,7 @@ async function textToSpeech(text, apiKey, fatherFigure = 1) {
         'xi-api-key': apiKey
       },
       body: JSON.stringify({
-        text: text,
+        text: text.replace(/\*/g, ''), // Remove asterisk characters from speech
         model_id: 'eleven_monolingual_v1',
         voice_settings: {
           stability: 0.5,
