@@ -93,7 +93,7 @@ const VIDEO_RECOMMENDATION_INTERVAL = 600000; // 10 minutes between video recomm
 const VIDEO_RECOMMENDATION_URL = 'https://youtu.be/EkkOTplBCmA';
 
 // Dad joke prompts based on screen content
-const DAD_JOKE_PROMPT = `Based on the following webpage content, make a short, corny dad joke that a loving father figure would tell. Keep it wholesome, family-friendly, and related to what's on the screen. Make it 1-2 sentences max, like a real dad would say. Don't be too clever - embrace the corniness!
+const DAD_JOKE_PROMPT = `Based on the following webpage content, make a SHORT, corny dad joke that a loving father figure would tell. MAXIMUM 2 lines. Keep it wholesome, family-friendly, and related to what's on the screen. Make it like a real dad would say - quick and punny!
 
 If the content is about:
 - Work/coding: Make jokes about bugs, features, or tech
@@ -103,7 +103,7 @@ If the content is about:
 - Entertainment: Jokes about shows, games, or content
 - General: Classic dad puns and wordplay
 
-Keep it short and sweet - this is a quick dad comment, not a comedy routine.
+IMPORTANT: Keep it to 2 sentences maximum. This is a quick dad comment, not a speech.
 
 Webpage content: `;
 
@@ -180,42 +180,11 @@ async function checkTabCount() {
       return;
     }
     
-    // Query all tabs in current window
-    chrome.tabs.query({currentWindow: true}, function(tabs) {
-      if (tabs && tabs.length >= TOO_MANY_TABS_THRESHOLD) {
-        const tabCount = tabs.length;
-        const tabMessages = [
-          `Kiddo, you've got ${tabCount} tabs open! That's more tabs than I have gray hairs... and that's saying something.`,
-          `${tabCount} tabs? What are you, a digital hoarder? Time to close some of those, champ.`,
-          `I see ${tabCount} tabs up there. Even I don't keep that many tools in my garage!`,
-          `${tabCount} tabs open? Your computer's working harder than me on a Saturday. Give it a break!`,
-          `That's ${tabCount} tabs, sport. Maybe close a few before your browser starts crying.`
-        ];
-        
-        const message = tabMessages[Math.floor(Math.random() * tabMessages.length)];
-        
-        // Wake up dad briefly for the warning
-        const wasAwake = isAwake;
-        if (!wasAwake) {
-          wakeUp();
-        }
-        
-        // Show speech bubble with tab warning
-        showSpeechBubble(message, 10000); // Show for 10 seconds
-        
-        // Update last warning time
-        lastTabWarningTime = now;
-        
-        // Go back to sleep after a delay if dad was sleeping
-        if (!wasAwake) {
-          setTimeout(() => {
-            goToSleep();
-          }, 12000); // Stay awake for 12 seconds after warning
-        }
-        
-        console.log('Tab warning triggered:', message);
-      }
-    });
+    // Skip tab checking in content scripts since chrome.tabs API is not available
+    // This feature would need to be implemented in the popup or background script
+    console.log('Tab count checking skipped - not available in content script');
+    return;
+    
   } catch (error) {
     console.error('Error checking tab count:', error);
   }
