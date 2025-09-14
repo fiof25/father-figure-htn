@@ -125,8 +125,12 @@ let lastJokeTime = 0;
 let lastActivityTime = Date.now();
 let snoringTimer = null;
 let currentSnoringAudio = null;
+let videoRecommendationTimer = null;
+let lastVideoRecommendationTime = 0;
 const IDLE_TIMEOUT = 30000; // 30 seconds of inactivity
 const JOKE_INTERVAL = 120000; // 2 minutes between dad jokes
+const VIDEO_RECOMMENDATION_INTERVAL = 180000; // 3 minutes between video recommendations
+const YOUTUBE_VIDEO_URL = 'https://youtu.be/MtN1YnoL46Q?si=PdE4rfCWIMx7mN5n';
 
 // Dad joke prompts based on screen content
 const DAD_JOKE_PROMPT = `Based on the following webpage content, make a SHORT, corny dad joke that a loving father figure would tell. MAXIMUM 2 lines. Keep it wholesome, family-friendly, and related to what's on the screen. Make it like a real dad would say - quick and punny!
@@ -354,6 +358,24 @@ function startDadJokeTimer() {
   }, JOKE_INTERVAL);
 }
 
+// Function to start video recommendation timer
+function startVideoRecommendationTimer() {
+  console.log('Starting video recommendation timer for', VIDEO_RECOMMENDATION_INTERVAL / 1000, 'seconds');
+  
+  // Clear existing timer
+  if (videoRecommendationTimer) {
+    clearTimeout(videoRecommendationTimer);
+  }
+  
+  // Set timer for 3 minutes
+  videoRecommendationTimer = setTimeout(() => {
+    console.log('Video recommendation timer triggered!');
+    triggerVideoRecommendation();
+    // Restart timer for next recommendation
+    startVideoRecommendationTimer();
+  }, VIDEO_RECOMMENDATION_INTERVAL);
+}
+
 // Function to trigger dad joke (can be called manually or automatically)
 async function triggerDadJoke(force = false) {
   try {
@@ -416,6 +438,77 @@ async function triggerDadJoke(force = false) {
     console.log('Dad joke triggered:', joke);
   } catch (error) {
     console.error('Error triggering dad joke:', error);
+  }
+}
+
+// Function to trigger video recommendation
+async function triggerVideoRecommendation(force = false) {
+  try {
+    console.log('triggerVideoRecommendation called, force:', force, 'tab visible:', !document.hidden);
+    
+    // Only trigger if tab is visible/active (unless forced)
+    if (!force && (document.hidden || document.visibilityState !== 'visible')) {
+      console.log('Tab not active, skipping video recommendation');
+      return;
+    }
+    
+    const now = Date.now();
+    
+    // Update last recommendation time
+    lastVideoRecommendationTime = now;
+    
+    const videoMessages = [
+      "Hey kiddo, check out this video I found for you!",
+      "You've been working hard - time for a quick video break!",
+      "I saw this and thought of you. Give it a watch!",
+      "Take a breather and watch this, champ!",
+      "Found something that'll make you smile. Check it out!"
+    ];
+    
+    const message = videoMessages[Math.floor(Math.random() * videoMessages.length)];
+    
+    // Wake up dad briefly for the recommendation
+    const wasAwake = isAwake;
+    if (!wasAwake) {
+      wakeUp();
+    }
+    
+    // Get API keys and settings for voice
+    const result = await new Promise(resolve => {
+      chrome.storage.local.get(['elevenlabsApiKey', 'voiceEnabled', 'fatherFigure'], resolve);
+    });
+    
+    // Always speak video recommendations if ElevenLabs key is available (override voice setting)
+    if (result.elevenlabsApiKey) {
+      try {
+        const currentFigure = result.fatherFigure || 1;
+        console.log('Speaking video recommendation with voice (always enabled for videos)...');
+        textToSpeech(message, result.elevenlabsApiKey, currentFigure); // Don't await - let voice continue while video opens
+      } catch (voiceError) {
+        console.error('Voice synthesis error for video recommendation:', voiceError);
+      }
+    } else {
+      console.log('No ElevenLabs API key available for voice synthesis');
+    }
+    
+    // Show speech bubble with video recommendation after voice starts
+    const bubble = showSpeechBubble(message, 5000);
+    
+    // Automatically open the video after a short delay
+    setTimeout(() => {
+      window.open(YOUTUBE_VIDEO_URL, '_blank');
+    }, 2000); // Open video after 2 seconds
+    
+    // Go back to sleep after a delay if dad was sleeping
+    if (!wasAwake) {
+      setTimeout(() => {
+        goToSleep();
+      }, 10000); // Stay awake for 10 seconds after recommendation
+    }
+    
+    console.log('Video recommendation triggered:', message);
+  } catch (error) {
+    console.error('Error triggering video recommendation:', error);
   }
 }
 
@@ -638,12 +731,16 @@ function goToSleep() {
   startRandomSnoring();
 }
 
-// Keyboard listener for 's' key to trigger snoring
+// Keyboard listeners for '[' key (snoring) and ']' key (video)
 document.addEventListener('keydown', function(e) {
-  if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     // Only trigger if not typing in an input field
     if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
-      playSnoring();
+      if (e.key === '[') {
+        playSnoring();
+      } else if (e.key === ']') {
+        triggerVideoRecommendation(true); // Force trigger
+      }
     }
   }
 });
@@ -1311,9 +1408,10 @@ function setupActivityTracking() {
   // Start initial tracking
   trackActivity();
   
-  // Start dad joke timer
-  console.log('Setting up activity tracking and starting dad joke timer');
+  // Start dad joke timer and video recommendation timer
+  console.log('Setting up activity tracking and starting timers');
   startDadJokeTimer();
+  startVideoRecommendationTimer();
 }
 
 // Expose triggerDadJoke globally for popup access
