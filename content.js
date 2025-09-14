@@ -853,8 +853,8 @@ function createOptionsOverlay(callback) {
         <span style="font-size: 10px; opacity: 0.6; flex: 1;">Click to speak or type above</span>
       </div>
       <div style="display: flex; gap: 5px; margin-top: 8px; font-size: 10px; opacity: 0.7;">
-        <input type="password" id="ff-api-key" placeholder="Enter Gemini API key..." autocomplete="new-password" spellcheck="false" style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
-        <input type="password" id="ff-elevenlabs-key" placeholder="ElevenLabs API key..." autocomplete="new-password" spellcheck="false" style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+        <input type="password" id="ff-api-key" placeholder="Enter Gemini API key..." autocomplete="off" spellcheck="false" style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+        <input type="password" id="ff-elevenlabs-key" placeholder="ElevenLabs API key..." autocomplete="off" spellcheck="false" style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
       </div>
       <div style="margin-top: 5px; display: flex; gap: 5px; align-items: center;">
         <label style="font-size: 10px; opacity: 0.7;">
