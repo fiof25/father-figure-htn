@@ -141,6 +141,7 @@ const img = document.createElement("img");
 // 2. Set up image sources
 const logoSrc = chrome.runtime.getURL("assets/Logo.png");
 
+let dadAwakeSrc = chrome.runtime.getURL("assets/Logo.png");
 let dadSleep1Src = chrome.runtime.getURL("assets/newbill1.png");
 let dadSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
 
@@ -149,22 +150,25 @@ function updateCharacter(figure) {
   console.log('Updating character to:', figure);
   
   if (figure === 1) {
+    dadAwakeSrc = chrome.runtime.getURL("assets/Logo.png");
     dadSleep1Src = chrome.runtime.getURL("assets/newbill1.png");
     dadSleep2Src = chrome.runtime.getURL("assets/newbill2.png");
   } else if (figure === 2) {
-    dadSleep1Src = chrome.runtime.getURL("assets/dave.png");
-    dadSleep2Src = chrome.runtime.getURL("assets/dave.png");
+    dadAwakeSrc = chrome.runtime.getURL("assets/dave.png");
+    dadSleep1Src = chrome.runtime.getURL("assets/davesleep1.png");
+    dadSleep2Src = chrome.runtime.getURL("assets/davesleep2.png");
   } else if (figure === 3) {
-    dadSleep1Src = chrome.runtime.getURL("assets/chang.png");
-    dadSleep2Src = chrome.runtime.getURL("assets/chang.png");
+    dadAwakeSrc = chrome.runtime.getURL("assets/chang.png");
+    dadSleep1Src = chrome.runtime.getURL("assets/changsleep1.png");
+    dadSleep2Src = chrome.runtime.getURL("assets/changsleep2.png");
   }
   
   console.log('New dadSleep1Src:', dadSleep1Src);
   
   // Update the image if it exists
   if (img) {
-    // If awake, show the logo, otherwise show the appropriate sleep image
-    img.src = isAwake ? logoSrc : dadSleep1Src;
+    // If awake, show the character-specific awake image, otherwise show the appropriate sleep image
+    img.src = isAwake ? dadAwakeSrc : dadSleep1Src;
     console.log('Updated img.src to:', img.src);
     
     // Make sure the sleep animation is running if we're not awake
@@ -217,7 +221,7 @@ function wakeUp() {
   if (sleepInterval) {
     clearInterval(sleepInterval);
   }
-  img.src = logoSrc;
+  img.src = dadAwakeSrc;
   // Resize logo specifically
   img.style.width = "190px";
   img.style.height = "190px";
@@ -228,8 +232,8 @@ function goToSleep() {
   sleepFrame = 1;
   img.src = dadSleep1Src;
   // Resize sleep images specifically
-  img.style.width = "160px";
-  img.style.height = "160px";
+  img.style.width = "210px";
+  img.style.height = "210px";
   startSleepAnimation();
 }
 
