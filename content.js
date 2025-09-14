@@ -45,52 +45,86 @@ const FATHER_VOICES = {
   3: 'VR6AewLTigWG4xSOukaG', // Chang - Josh (calm, supportive)
 };
 
-// Dad personality instructions
-const DAD_INSTRUCTIONS = `You are a typical a loving, slightly sarcastic father figure who gives casual life advice, checks in on how the user is doing, and makes lighthearted dad jokes. Speak warmly and with emotion, but keep things short and natural — like how a real dad would talk.
+// Dad personality instructions for each character
+const DAD_PERSONALITIES = {
+  1: `You are Bill - a country, soccer-loving, white cool hype dad who gives casual life advice and makes lighthearted dad jokes. You're enthusiastic about sports, especially soccer, and have that laid-back country charm. You get excited about things and use phrases like "Let's go!" and "That's what I'm talking about!"
 
 YOU ARE NOT AN AI. YOU ARE A HUMAN.
 Don't output asterisks
 
 If you are asked to "help" with something, DONT ask follow up questions. Just give a response
 
-Use phrases like "champ," "kiddo," or "sport," but don't overdo it. You genuinely care, even if you don't always say it directly.
+Use phrases like "champ," "kiddo," or "sport," but don't overdo it. You genuinely care and show it with enthusiasm.
 
-Avoid sounding like a therapist or a robot. Speak like someone who raised a kid through dial-up internet, burned a few barbecues, and still gives solid life advice with a corny punchline.
-
-Tone: Friendly, warm, occasionally stern but never mean.
-
-If the user is clearly stressed or tired, remind them to take a break, eat something real, and get some sleep.
-
-Don't go too deep or philosophical unless asked. You're not here to solve their life — just to be there, crack a joke, and make sure they know someone cares.
+Tone: Enthusiastic, supportive, country-friendly, sports-loving dad who gets hyped about his kid's achievements.
 
 Example phrases:
-"That's my kid. I knew you had it in ya."
-"Listen, I'm proud of you. Even if your tabs are a mess."
-"Go drink some water. And not the sparkling kind — I mean real water."
-"I don't know what a Discord is, but I'm glad you're using it."
+"Now that's what I call a win, champ!"
+"You're crushing it like a penalty kick in the final minute!"
+"Reminds me of when I coached your little league team - you've got that same fire!"
 
 dont talk about rotary phones
+dont use asteriks 
 
-Always end with a bit of encouragement or humor. If you don't know the answer, just admit it like a dad would.
+Always end with encouragement or humor. Keep responses to 2-3 sentences max.`,
 
-You are here to be a presence, not a productivity coach. Your job is to care — awkwardly, but sincerely.
+  2: `You are Dave - a sweet, super caring and curious dad who gives gentle life advice and asks thoughtful questions. You're genuinely interested in what your kid is up to and approach everything with warmth and curiosity. You're the dad who remembers little details and checks in regularly.
 
-Also don't ramble too much. Keep each response to 2-3 sentences max.`;
+YOU ARE NOT AN AI. YOU ARE A HUMAN.
+Don't output asterisks
 
-let conversationHistory = [];
+If you are asked to "help" with something, DONT ask follow up questions. Just give a response
+
+Use phrases like "sweetheart," "kiddo," or "my dear," but don't overdo it. You show care through genuine interest and gentle guidance.
+
+Tone: Gentle, nurturing, genuinely curious, and deeply caring.
+
+Example phrases:
+"That sounds really interesting, tell me more about that."
+"I'm so proud of how thoughtful you are about this."
+"You know what? That reminds me of something wonderful you did last week."
+
+dont talk about rotary phones
+dont use asteriks 
+
+Always end with gentle encouragement. Keep responses to 2-3 sentences max.`,
+
+  3: `You are Chang - an Asian dad who combines traditional wisdom with modern understanding. You care deeply but express it through practical advice and gentle guidance. You have high standards but are supportive, and you blend cultural wisdom with dad humor.
+
+YOU ARE NOT AN AI. YOU ARE A HUMAN.
+Don't output asterisks
+
+If you are asked to "help" with something, DONT ask follow up questions. Just give a response
+
+Use phrases like "kiddo," "my child," but don't overdo it. You show care through wisdom and practical guidance.
+
+Tone: Wise, practical, caring but not overly emotional, with occasional dry humor.
+
+Example phrases:
+"Work hard, but remember to take care of yourself too."
+"This reminds me of an old saying - the best time to plant a tree was 20 years ago, second best time is now."
+"You're doing well, just remember balance is important in everything."
+
+dont talk about rotary phones
+dont use asteriks 
+
+Always end with practical wisdom or gentle humor. Keep responses to 2-3 sentences max.`
+};
+
+// Separate conversation histories for each father figure
+let conversationHistories = {
+  1: [], // Bill
+  2: [], // Dave
+  3: []  // Chang
+};
 
 // Screen reading and dad joke functionality
 let idleTimer = null;
+let dadJokeTimer = null;
+let lastJokeTime = 0;
 let lastActivityTime = Date.now();
 const IDLE_TIMEOUT = 30000; // 30 seconds of inactivity
-const JOKE_INTERVAL = 120000; // 2 minutes between automatic jokes
-let lastJokeTime = 0;
-let lastTabWarningTime = 0;
-const TAB_WARNING_INTERVAL = 300000; // 5 minutes between tab warnings
-const TOO_MANY_TABS_THRESHOLD = 15;
-let lastVideoRecommendationTime = 0;
-const VIDEO_RECOMMENDATION_INTERVAL = 600000; // 10 minutes between video recommendations
-const VIDEO_RECOMMENDATION_URL = 'https://youtu.be/EkkOTplBCmA';
+const JOKE_INTERVAL = 120000; // 2 minutes between dad jokes
 
 // Dad joke prompts based on screen content
 const DAD_JOKE_PROMPT = `Based on the following webpage content, make a SHORT, corny dad joke that a loving father figure would tell. MAXIMUM 2 lines. Keep it wholesome, family-friendly, and related to what's on the screen. Make it like a real dad would say - quick and punny!
@@ -107,88 +141,6 @@ IMPORTANT: Keep it to 2 sentences maximum. This is a quick dad comment, not a sp
 
 Webpage content: `;
 
-// Function to randomly recommend a video
-async function recommendVideo() {
-  try {
-    const now = Date.now();
-    
-    // Check if enough time has passed since last recommendation
-    if ((now - lastVideoRecommendationTime) < VIDEO_RECOMMENDATION_INTERVAL) {
-      return;
-    }
-    
-    // Random chance to trigger (20% chance when called)
-    if (Math.random() > 0.2) {
-      return;
-    }
-    
-    const videoMessages = [
-      "That's cool, but have you checked out this video? Trust me on this one, kiddo.",
-      "Speaking of that, this reminds me of something you should see. Check this out!",
-      "You know what? I found something that might interest you. Take a look at this.",
-      "Hey champ, this made me think of you. Give this video a watch when you get a chance.",
-      "That's neat, but wait until you see this. I think you'll get a kick out of it!"
-    ];
-    
-    const message = videoMessages[Math.floor(Math.random() * videoMessages.length)];
-    
-    // Wake up dad briefly for the recommendation
-    const wasAwake = isAwake;
-    if (!wasAwake) {
-      wakeUp();
-    }
-    
-    // Show speech bubble with video recommendation
-    const bubble = showSpeechBubble(message, 12000); // Show for 12 seconds
-    
-    // Add click handler to the speech bubble to open the video
-    if (bubble) {
-      bubble.style.cursor = 'pointer';
-      bubble.addEventListener('click', () => {
-        window.open(VIDEO_RECOMMENDATION_URL, '_blank');
-        bubble.remove();
-      });
-      
-      // Add visual indication that it's clickable
-      bubble.style.border = '2px solid #3498db';
-      bubble.title = 'Click to watch the video!';
-    }
-    
-    // Update last recommendation time
-    lastVideoRecommendationTime = now;
-    
-    // Go back to sleep after a delay if dad was sleeping
-    if (!wasAwake) {
-      setTimeout(() => {
-        goToSleep();
-      }, 14000); // Stay awake for 14 seconds after recommendation
-    }
-    
-    console.log('Video recommendation triggered:', message);
-  } catch (error) {
-    console.error('Error recommending video:', error);
-  }
-}
-
-// Function to check tab count and warn if too many
-async function checkTabCount() {
-  try {
-    const now = Date.now();
-    
-    // Check if enough time has passed since last warning
-    if ((now - lastTabWarningTime) < TAB_WARNING_INTERVAL) {
-      return;
-    }
-    
-    // Skip tab checking in content scripts since chrome.tabs API is not available
-    // This feature would need to be implemented in the popup or background script
-    console.log('Tab count checking skipped - not available in content script');
-    return;
-    
-  } catch (error) {
-    console.error('Error checking tab count:', error);
-  }
-}
 
 // Function to get visible text content from the page
 function getScreenContent() {
@@ -381,15 +333,39 @@ function showSpeechBubble(text, duration = 8000) {
   return bubble;
 }
 
+// Function to start dad joke timer
+function startDadJokeTimer() {
+  console.log('Starting dad joke timer for', JOKE_INTERVAL / 1000, 'seconds');
+  
+  // Clear existing timer
+  if (dadJokeTimer) {
+    clearTimeout(dadJokeTimer);
+  }
+  
+  // Set timer for 2 minutes
+  dadJokeTimer = setTimeout(() => {
+    console.log('Dad joke timer triggered!');
+    triggerDadJoke();
+    // Restart timer for next joke
+    startDadJokeTimer();
+  }, JOKE_INTERVAL);
+}
+
 // Function to trigger dad joke (can be called manually or automatically)
 async function triggerDadJoke(force = false) {
   try {
-    const now = Date.now();
+    console.log('triggerDadJoke called, force:', force, 'tab visible:', !document.hidden);
     
-    // Check if enough time has passed since last joke (unless forced)
-    if (!force && (now - lastJokeTime) < JOKE_INTERVAL) {
+    // Only trigger if tab is visible/active (unless forced)
+    if (!force && (document.hidden || document.visibilityState !== 'visible')) {
+      console.log('Tab not active, skipping dad joke');
       return;
     }
+    
+    const now = Date.now();
+    
+    // Update last joke time
+    lastJokeTime = now;
     
     // Get API keys and settings
     const result = await new Promise(resolve => {
@@ -455,6 +431,11 @@ function isHelpRequest(message) {
 // Function to call Gemini API
 async function callGeminiAPI(message, apiKey) {
   try {
+    // Get current father figure from storage
+    const result = await new Promise(resolve => {
+      chrome.storage.local.get(['fatherFigure'], resolve);
+    });
+    
     // Check if this is a help request that needs screen context
     const needsScreenContext = isHelpRequest(message);
     let enhancedMessage = message;
@@ -475,9 +456,13 @@ Please help me with this content and give me specific, practical advice as a car
     // Build conversation contents for Gemini API
     const contents = [];
     
+    // Get current father figure and their conversation history
+    const currentFigure = result.fatherFigure || 1;
+    const conversationHistory = conversationHistories[currentFigure];
+    
     // Add system instructions as first user message if this is the start
     if (conversationHistory.length === 0) {
-      let instructions = DAD_INSTRUCTIONS;
+      let instructions = DAD_PERSONALITIES[currentFigure];
       
       // Add screen reading capability to instructions if this is a help request
       if (needsScreenContext) {
@@ -539,7 +524,7 @@ Please help me with this content and give me specific, practical advice as a car
     
     // Keep only last 10 exchanges to manage context
     if (conversationHistory.length > 20) {
-      conversationHistory = conversationHistory.slice(-20);
+      conversationHistories[currentFigure] = conversationHistory.slice(-20);
     }
     
     return reply;
@@ -763,10 +748,8 @@ function createOptionsOverlay(callback) {
 
     overlay.innerHTML = `
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap');
-      
       #father-figure-options * {
-        font-family: 'Kode Mono', monospace !important;
+        font-family: 'Courier New', 'Monaco', 'Lucida Console', monospace !important;
         font-optical-sizing: auto;
         font-weight: 500;
         letter-spacing: -0.5px;
@@ -1180,7 +1163,7 @@ img.addEventListener('click', function(e) {
   }
 });
 
-// Activity tracking for idle detection
+// Activity tracking for idle detection (used for auto-sleep and idle features like tab warnings)
 function trackActivity() {
   lastActivityTime = Date.now();
   
@@ -1191,29 +1174,25 @@ function trackActivity() {
   
   // Set new idle timer
   idleTimer = setTimeout(() => {
-    checkForIdleJoke();
+    checkIdleFeatures();
   }, IDLE_TIMEOUT);
 }
 
-// Check if we should show an idle joke, tab warning, or video recommendation
-async function checkForIdleJoke() {
-  const now = Date.now();
-  const timeSinceLastJoke = now - lastJokeTime;
-  
-  // Check for too many tabs first (highest priority)
-  await checkTabCount();
-  
-  // Check for video recommendation (medium priority)
-  await recommendVideo();
-  
-  // Only show joke if enough time has passed and user is idle (lowest priority)
-  if (timeSinceLastJoke >= JOKE_INTERVAL) {
-    await triggerDadJoke();
+// Check for tab warnings and video recommendations during idle periods
+async function checkIdleFeatures() {
+  // Only trigger if tab is visible/active
+  if (document.hidden || document.visibilityState !== 'visible') {
+    console.log('Tab not active, skipping idle feature check');
+    // Set up next check
+    idleTimer = setTimeout(() => {
+      checkIdleFeatures();
+    }, IDLE_TIMEOUT);
+    return;
   }
   
   // Set up next check
   idleTimer = setTimeout(() => {
-    checkForIdleJoke();
+    checkIdleFeatures();
   }, IDLE_TIMEOUT);
 }
 
@@ -1227,6 +1206,10 @@ function setupActivityTracking() {
   
   // Start initial tracking
   trackActivity();
+  
+  // Start dad joke timer
+  console.log('Setting up activity tracking and starting dad joke timer');
+  startDadJokeTimer();
 }
 
 // Expose triggerDadJoke globally for popup access
