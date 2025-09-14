@@ -37,7 +37,13 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 
 // ElevenLabs Voice API integration
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
-const ELEVENLABS_VOICE_ID = 'ChO6kqkVouUn0s7HMunx'; // Adam voice - good for father figure
+
+// Different voices for each father figure
+const FATHER_VOICES = {
+  1: 'pNInz6obpgDQGcFmaJgB', // Bill - Adam (warm, friendly)
+  2: 'ErXwobaYiN019PkySvjV', // Dave - Antoni (mature, wise)
+  3: 'VR6AewLTigWG4xSOukaG', // Chang - Josh (calm, supportive)
+};
 
 // Dad personality instructions
 const DAD_INSTRUCTIONS = `You are a typical a loving, slightly sarcastic father figure who gives casual life advice, checks in on how the user is doing, and makes lighthearted dad jokes. Speak warmly and with emotion, but keep things short and natural — like how a real dad would talk.
@@ -58,6 +64,8 @@ Example phrases:
 "Go drink some water. And not the sparkling kind — I mean real water."
 "I don't know what a Discord is, but I'm glad you're using it."
 
+dont talk about rotary phones
+
 Always end with a bit of encouragement or humor. If you don't know the answer, just admit it like a dad would.
 
 You are here to be a presence, not a productivity coach. Your job is to care — awkwardly, but sincerely.
@@ -67,9 +75,10 @@ Also don't ramble too much. Keep each response to 2-3 sentences max.`;
 let conversationHistory = [];
 
 // Function to convert text to speech using ElevenLabs
-async function textToSpeech(text, apiKey) {
+async function textToSpeech(text, apiKey, fatherFigure = 1) {
   try {
-    const response = await fetch(`${ELEVENLABS_API_URL}/${ELEVENLABS_VOICE_ID}`, {
+    const voiceId = FATHER_VOICES[fatherFigure] || FATHER_VOICES[1];
+    const response = await fetch(`${ELEVENLABS_API_URL}/${voiceId}`, {
       method: 'POST',
       headers: {
         'Accept': 'audio/mpeg',
@@ -494,7 +503,7 @@ function createOptionsOverlay(callback) {
     <div id="ff-chat-container" style="margin-top: 15px; display: none;">
       <div id="ff-chat-messages" style="max-height: 200px; overflow-y: auto; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 10px; font-size: 12px; line-height: 1.4;"></div>
       <div style="display: flex; gap: 8px; align-items: center;">
-        <input type="text" id="ff-chat-input" placeholder="Talk to dad..." style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: white; font-size: 12px;" />
+        <input type="text" id="ff-chat-input" placeholder="Talk to dad..." autocomplete="off" spellcheck="false" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: white; font-size: 12px;" />
         <button id="ff-chat-send" style="padding: 8px 16px; border: none; border-radius: 6px; background: rgba(255,255,255,0.3); color: white; cursor: pointer; font-size: 12px; font-weight: bold; min-width: 70px;">Send</button>
       </div>
       <div style="display: flex; gap: 5px; margin-top: 8px; align-items: center;">
@@ -502,8 +511,8 @@ function createOptionsOverlay(callback) {
         <span style="font-size: 10px; opacity: 0.6; flex: 1;">Click to speak or type above</span>
       </div>
       <div style="display: flex; gap: 5px; margin-top: 8px; font-size: 10px; opacity: 0.7;">
-        <input type="password" id="ff-api-key" placeholder="Enter Gemini API key..." style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
-        <input type="password" id="ff-elevenlabs-key" placeholder="ElevenLabs API key..." style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+        <input type="password" id="ff-api-key" placeholder="Enter Gemini API key..." autocomplete="new-password" spellcheck="false" style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+        <input type="password" id="ff-elevenlabs-key" placeholder="ElevenLabs API key..." autocomplete="new-password" spellcheck="false" style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
       </div>
       <div style="margin-top: 5px; display: flex; gap: 5px; align-items: center;">
         <label style="font-size: 10px; opacity: 0.7;">
@@ -729,7 +738,11 @@ img.addEventListener('click', function(e) {
             // If voice is enabled and ElevenLabs key is provided, speak the response
             if (voiceEnabledCheckbox.checked && elevenlabsKeyInput.value) {
               try {
-                await textToSpeech(response, elevenlabsKeyInput.value);
+                // Get current father figure for voice selection
+                chrome.storage.local.get(['fatherFigure'], async function(result) {
+                  const currentFigure = result.fatherFigure || 1;
+                  await textToSpeech(response, elevenlabsKeyInput.value, currentFigure);
+                });
               } catch (voiceError) {
                 console.error('Voice synthesis error:', voiceError);
                 addChatMessage('System', '🔇 Voice synthesis failed. Check your ElevenLabs API key.');
