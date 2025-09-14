@@ -340,6 +340,45 @@ function showSpeechBubble(text, duration = 8000) {
   return bubble;
 }
 
+// Function to trigger random dad messages (cheer, advice, motivation)
+function triggerRandomDadMessage() {
+  try {
+    // Only trigger if tab is visible/active
+    if (document.hidden || document.visibilityState !== 'visible') {
+      return;
+    }
+    
+    // Combine all message types
+    const allMessages = [
+      ...cheerMessages,
+      ...adviceMessages, 
+      ...motivationMessages
+    ];
+    
+    const randomMessage = allMessages[Math.floor(Math.random() * allMessages.length)];
+    
+    // Wake up dad briefly for the message
+    const wasAwake = isAwake;
+    if (!wasAwake) {
+      wakeUp();
+    }
+    
+    // Show speech bubble with random dad message
+    showSpeechBubble(randomMessage, 8000);
+    
+    // Go back to sleep after a delay if dad was sleeping
+    if (!wasAwake) {
+      setTimeout(() => {
+        goToSleep();
+      }, 10000);
+    }
+    
+    console.log('Random dad message triggered:', randomMessage);
+  } catch (error) {
+    console.error('Error triggering random dad message:', error);
+  }
+}
+
 // Function to start dad joke timer
 function startDadJokeTimer() {
   console.log('Starting dad joke timer for', JOKE_INTERVAL / 1000, 'seconds');
@@ -352,8 +391,15 @@ function startDadJokeTimer() {
   // Set timer for 2 minutes
   dadJokeTimer = setTimeout(() => {
     console.log('Dad joke timer triggered!');
-    triggerDadJoke();
-    // Restart timer for next joke
+    
+    // 50% chance for dad joke, 50% chance for random dad message
+    if (Math.random() < 0.5) {
+      triggerDadJoke();
+    } else {
+      triggerRandomDadMessage();
+    }
+    
+    // Restart timer for next joke/message
     startDadJokeTimer();
   }, JOKE_INTERVAL);
 }
@@ -969,68 +1015,7 @@ function createOptionsOverlay(callback) {
       </div>
     
     <div style="position: relative; display: inline-block; width: 200px;" id="ff-cheer">
-  <!-- Image -->
-  <img src="${chrome.runtime.getURL('assets/button.png')}" 
-       style="width: 100%; object-fit: contain;">
-
-  <!-- Text -->
-  <span style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 18px;
-      font-weight: 600;
-      text-align: center;
-      pointer-events: none;
-      font-family: 'Kode Mono', monospace;
-  ">
-    🎉 Cheer Me Up
-  </span>
-</div>
-<div style="position: relative; display: inline-block; width: 200px;" id="ff-advice">
-  <!-- Image -->
-  <img src="${chrome.runtime.getURL('assets/button.png')}" 
-       style="width: 100%; object-fit: contain;">
-
-  <!-- Text -->
-  <span style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 18px;
-      font-weight: 600;
-      text-align: center;
-      pointer-events: none;
-      font-family: 'Kode Mono', monospace;
-  ">
-    💡 Give Me Advice
-  </span>
-</div>
-<div style="position: relative; display: inline-block; width: 200px;" id="ff-motivation">
-  <!-- Image -->
-  <img src="${chrome.runtime.getURL('assets/button.png')}" 
-       style="width: 100%; object-fit: contain;">
-
-  <!-- Text -->
-  <span style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-size: 18px;
-      font-weight: 600;
-      text-align: center;
-      pointer-events: none;
-      font-family: 'Kode Mono', monospace;
-  ">
-    💪 Motivate Me
-  </span>
-</div>
+  
     <div style="display: flex; flex-direction: column; gap: 8px;">
       <button id="ff-chat-toggle" style="padding: 8px; border: none; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
         💬 Chat with Dad
@@ -1145,21 +1130,6 @@ img.addEventListener('click', function(e) {
         
         // Add event listeners
         const messageDiv = overlay.querySelector('#ff-message');
-        
-        overlay.querySelector('#ff-cheer').addEventListener('click', function() {
-          const randomMessage = cheerMessages[Math.floor(Math.random() * cheerMessages.length)];
-          showMessage(randomMessage, messageDiv);
-        });
-        
-        overlay.querySelector('#ff-advice').addEventListener('click', function() {
-          const randomMessage = adviceMessages[Math.floor(Math.random() * adviceMessages.length)];
-          showMessage(randomMessage, messageDiv);
-        });
-        
-        overlay.querySelector('#ff-motivation').addEventListener('click', function() {
-          const randomMessage = motivationMessages[Math.floor(Math.random() * motivationMessages.length)];
-          showMessage(randomMessage, messageDiv);
-        });
         
         overlay.querySelector('#ff-close').addEventListener('click', function() {
           overlay.style.transform = 'scale(0)';
