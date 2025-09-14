@@ -35,6 +35,10 @@ const motivationMessages = [
 // Gemini API integration
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
+// ElevenLabs Voice API integration
+const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
+const ELEVENLABS_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // Adam voice - good for father figure
+
 // Dad personality instructions
 const DAD_INSTRUCTIONS = `You are a typical a loving, slightly sarcastic father figure who gives casual life advice, checks in on how the user is doing, and makes lighthearted dad jokes. Speak warmly and with emotion, but keep things short and natural — like how a real dad would talk.
 
@@ -61,6 +65,48 @@ You are here to be a presence, not a productivity coach. Your job is to care —
 Also don't ramble too much. Keep each response to 2-3 sentences max.`;
 
 let conversationHistory = [];
+
+// Function to convert text to speech using ElevenLabs
+async function textToSpeech(text, apiKey) {
+  try {
+    const response = await fetch(`${ELEVENLABS_API_URL}/${ELEVENLABS_VOICE_ID}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_monolingual_v1',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.5
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`ElevenLabs API error: ${response.status}`);
+    }
+
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+    
+    return new Promise((resolve, reject) => {
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        resolve();
+      };
+      audio.onerror = reject;
+      audio.play();
+    });
+  } catch (error) {
+    console.error('Text-to-speech error:', error);
+    throw error;
+  }
+}
 
 // Function to call Gemini API
 async function callGeminiAPI(message, apiKey) {
@@ -447,12 +493,23 @@ function createOptionsOverlay(callback) {
     
     <div id="ff-chat-container" style="margin-top: 15px; display: none;">
       <div id="ff-chat-messages" style="max-height: 200px; overflow-y: auto; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 10px; font-size: 12px; line-height: 1.4;"></div>
-      <div style="display: flex; gap: 5px;">
+      <div style="display: flex; gap: 8px; align-items: center;">
         <input type="text" id="ff-chat-input" placeholder="Talk to dad..." style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: white; font-size: 12px;" />
-        <button id="ff-chat-send" style="padding: 8px 12px; border: none; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 12px;">Send</button>
+        <button id="ff-chat-send" style="padding: 8px 16px; border: none; border-radius: 6px; background: rgba(255,255,255,0.3); color: white; cursor: pointer; font-size: 12px; font-weight: bold; min-width: 70px;">Send</button>
       </div>
-      <div style="margin-top: 8px; font-size: 10px; opacity: 0.7;">
-        <input type="password" id="ff-api-key" placeholder="Enter Gemini API key..." style="width: 100%; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+      <div style="display: flex; gap: 5px; margin-top: 8px; align-items: center;">
+        <button id="ff-voice-input" style="padding: 6px 10px; border: none; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 11px;">🎤 Voice</button>
+        <span style="font-size: 10px; opacity: 0.6; flex: 1;">Click to speak or type above</span>
+      </div>
+      <div style="display: flex; gap: 5px; margin-top: 8px; font-size: 10px; opacity: 0.7;">
+        <input type="password" id="ff-api-key" placeholder="Enter Gemini API key..." style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+        <input type="password" id="ff-elevenlabs-key" placeholder="ElevenLabs API key..." style="flex: 1; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+      </div>
+      <div style="margin-top: 5px; display: flex; gap: 5px; align-items: center;">
+        <label style="font-size: 10px; opacity: 0.7;">
+          <input type="checkbox" id="ff-voice-enabled" style="margin-right: 5px;" />
+          Enable voice responses
+        </label>
       </div>
     </div>
     
@@ -545,19 +602,92 @@ img.addEventListener('click', function(e) {
         const chatMessages = overlay.querySelector('#ff-chat-messages');
         const chatInput = overlay.querySelector('#ff-chat-input');
         const chatSend = overlay.querySelector('#ff-chat-send');
+        const voiceInput = overlay.querySelector('#ff-voice-input');
         const apiKeyInput = overlay.querySelector('#ff-api-key');
+        const elevenlabsKeyInput = overlay.querySelector('#ff-elevenlabs-key');
+        const voiceEnabledCheckbox = overlay.querySelector('#ff-voice-enabled');
         
-        // Load saved API key
-        chrome.storage.local.get(['geminiApiKey'], function(result) {
+        let isRecording = false;
+        let recognition = null;
+        
+        // Load saved API keys and settings
+        chrome.storage.local.get(['geminiApiKey', 'elevenlabsApiKey', 'voiceEnabled'], function(result) {
           if (result.geminiApiKey) {
             apiKeyInput.value = result.geminiApiKey;
           }
+          if (result.elevenlabsApiKey) {
+            elevenlabsKeyInput.value = result.elevenlabsApiKey;
+          }
+          if (result.voiceEnabled !== undefined) {
+            voiceEnabledCheckbox.checked = result.voiceEnabled;
+          }
         });
         
-        // Save API key when changed
+        // Save API keys and settings when changed
         apiKeyInput.addEventListener('input', function() {
           chrome.storage.local.set({ geminiApiKey: this.value });
         });
+        
+        elevenlabsKeyInput.addEventListener('input', function() {
+          chrome.storage.local.set({ elevenlabsApiKey: this.value });
+        });
+        
+        voiceEnabledCheckbox.addEventListener('change', function() {
+          chrome.storage.local.set({ voiceEnabled: this.checked });
+        });
+
+        // Voice input functionality
+        voiceInput.addEventListener('click', function() {
+          if (!isRecording) {
+            startVoiceRecording();
+          } else {
+            stopVoiceRecording();
+          }
+        });
+
+        function startVoiceRecording() {
+          if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = function() {
+              isRecording = true;
+              voiceInput.textContent = '🔴';
+              voiceInput.style.background = 'rgba(255,0,0,0.3)';
+            };
+
+            recognition.onresult = function(event) {
+              const transcript = event.results[0][0].transcript;
+              chatInput.value = transcript;
+            };
+
+            recognition.onend = function() {
+              isRecording = false;
+              voiceInput.textContent = '🎤';
+              voiceInput.style.background = 'rgba(255,255,255,0.2)';
+            };
+
+            recognition.onerror = function(event) {
+              console.error('Speech recognition error:', event.error);
+              isRecording = false;
+              voiceInput.textContent = '🎤';
+              voiceInput.style.background = 'rgba(255,255,255,0.2)';
+            };
+
+            recognition.start();
+          } else {
+            addChatMessage('Dad', 'Sorry kiddo, your browser doesn\'t support voice input.');
+          }
+        }
+
+        function stopVoiceRecording() {
+          if (recognition) {
+            recognition.stop();
+          }
+        }
 
         overlay.querySelector('#ff-chat-toggle').addEventListener('click', function() {
           const isVisible = chatContainer.style.display !== 'none';
@@ -567,7 +697,7 @@ img.addEventListener('click', function(e) {
 
         async function sendMessage() {
           const message = chatInput.value.trim();
-          const apiKey = 'AIzaSyDZs3u2mv91eNo3UsZ-OJMRPTk67Ex6ams'
+          const apiKey = apiKeyInput.value || 'AIzaSyDZs3u2mv91eNo3UsZ-OJMRPTk67Ex6ams'
           
           if (!message) return;
           if (!apiKey) {
@@ -597,6 +727,16 @@ img.addEventListener('click', function(e) {
             // Remove thinking message and add real response
             thinkingMsg.remove();
             addChatMessage('Dad', response);
+            
+            // If voice is enabled and ElevenLabs key is provided, speak the response
+            if (voiceEnabledCheckbox.checked && elevenlabsKeyInput.value) {
+              try {
+                await textToSpeech(response, elevenlabsKeyInput.value);
+              } catch (voiceError) {
+                console.error('Voice synthesis error:', voiceError);
+                addChatMessage('System', '🔇 Voice synthesis failed. Check your ElevenLabs API key.');
+              }
+            }
           } catch (error) {
             thinkingMsg.remove();
             addChatMessage('Dad', 'Sorry kiddo, something went wrong. Check that API key?');
