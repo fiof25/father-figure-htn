@@ -66,14 +66,72 @@ function triggerDadJokeInTab() {
       chrome.scripting.executeScript({
         target: {tabId: tabs[0].id},
         function: () => {
-          if (window.triggerDadJoke) {
-            window.triggerDadJoke(true); // Force joke
+          if (window.queueSpeechAction && window.triggerDadJoke) {
+            window.queueSpeechAction(() => window.triggerDadJoke(true), 'Manual Dad Joke', 'high');
           }
         }
       });
       
       // Show feedback in popup
       showMessage("Dad is telling you a joke! 😄");
+      
+      // Close popup after triggering
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+    }
+  });
+}
+
+// Function to trigger sneeze in active tab
+function triggerSneezeInTab() {
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    if (tabs[0]) {
+      chrome.scripting.executeScript({
+        target: {tabId: tabs[0].id},
+        function: () => {
+          console.log('Popup sneeze button clicked - checking functions...');
+          console.log('queueSpeechAction available:', typeof window.queueSpeechAction);
+          console.log('triggerSneeze available:', typeof window.triggerSneeze);
+          
+          if (window.queueSpeechAction && window.triggerSneeze) {
+            console.log('Triggering sneeze from popup...');
+            window.queueSpeechAction(() => window.triggerSneeze(), 'Manual Sneeze', 'high');
+          } else {
+            console.error('Functions not available - trying direct call...');
+            if (window.triggerSneeze) {
+              window.triggerSneeze();
+            }
+          }
+        }
+      });
+      
+      // Show feedback in popup
+      showMessage("Dad is sneezing! 🤧");
+      
+      // Close popup after triggering
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+    }
+  });
+}
+
+// Function to trigger chess game in active tab
+function triggerChessGameInTab() {
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    if (tabs[0]) {
+      chrome.scripting.executeScript({
+        target: {tabId: tabs[0].id},
+        function: () => {
+          if (window.createChessGame) {
+            window.createChessGame();
+          }
+        }
+      });
+      
+      // Show feedback in popup
+      showMessage("Starting chess game! ♟️");
       
       // Close popup after triggering
       setTimeout(() => {
@@ -98,6 +156,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const dadJokeBtn = document.getElementById('dad-joke-btn');
   if (dadJokeBtn) {
     dadJokeBtn.addEventListener('click', triggerDadJokeInTab);
+  }
+
+  // Set up sneeze button
+  const sneezeBtn = document.getElementById('sneeze-btn');
+  if (sneezeBtn) {
+    sneezeBtn.addEventListener('click', triggerSneezeInTab);
+  }
+
+  // Set up chess button
+  const chessBtn = document.getElementById('chess-btn');
+  if (chessBtn) {
+    chessBtn.addEventListener('click', triggerChessGameInTab);
   }
 
   // Load current selection

@@ -127,10 +127,71 @@ let snoringTimer = null;
 let currentSnoringAudio = null;
 let videoRecommendationTimer = null;
 let lastVideoRecommendationTime = 0;
+let sneezeTimer = null;
+let lastSneezeTime = 0;
 const IDLE_TIMEOUT = 30000; // 30 seconds of inactivity
 const JOKE_INTERVAL = 120000; // 2 minutes between dad jokes
 const VIDEO_RECOMMENDATION_INTERVAL = 180000; // 3 minutes between video recommendations
+const SNEEZE_INTERVAL = 300000; // 5 minutes between random sneezes
 const YOUTUBE_VIDEO_URL = 'https://youtu.be/MtN1YnoL46Q?si=PdE4rfCWIMx7mN5n';
+
+// Speech action queue system
+let speechQueue = [];
+let isProcessingSpeech = false;
+
+// Chess game state
+let chessGame = null;
+let chessBoard = null;
+let isChessGameActive = false;
+
+// Queue a speech action to prevent overlapping
+function queueSpeechAction(actionFunction, actionName, priority = 'normal') {
+  const speechAction = {
+    action: actionFunction,
+    name: actionName,
+    priority: priority,
+    timestamp: Date.now()
+  };
+  
+  // Insert based on priority (high priority goes first)
+  if (priority === 'high') {
+    speechQueue.unshift(speechAction);
+  } else {
+    speechQueue.push(speechAction);
+  }
+  
+  console.log(`Queued speech action: ${actionName}, queue length: ${speechQueue.length}`);
+  
+  // Process queue if not already processing
+  if (!isProcessingSpeech) {
+    processSpeechQueue();
+  }
+}
+
+// Process the speech queue one action at a time
+async function processSpeechQueue() {
+  if (isProcessingSpeech || speechQueue.length === 0) {
+    return;
+  }
+  
+  isProcessingSpeech = true;
+  
+  while (speechQueue.length > 0) {
+    const speechAction = speechQueue.shift();
+    console.log(`Processing speech action: ${speechAction.name}`);
+    
+    try {
+      await speechAction.action();
+      // Wait a bit between actions to prevent rapid-fire speech
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error) {
+      console.error(`Error processing speech action ${speechAction.name}:`, error);
+    }
+  }
+  
+  isProcessingSpeech = false;
+  console.log('Speech queue processing complete');
+}
 
 // Dad joke prompts based on screen content
 const DAD_JOKE_PROMPT = `Based on the following webpage content, make a SHORT, corny dad joke that a loving father figure would tell. MAXIMUM 2 lines. Keep it wholesome, family-friendly, and related to what's on the screen. Make it like a real dad would say - quick and punny!
@@ -148,6 +209,587 @@ IMPORTANT: Keep it to 2 sentences maximum. This is a quick dad comment, not a sp
 
 Webpage content: `;
 
+
+// Function to trigger sad response with appropriate image
+async function triggerSadResponse(currentFigure) {
+  try {
+    console.log('Sad response triggered for figure:', currentFigure);
+    
+    // Wake up dad if sleeping
+    const wasAwake = isAwake;
+    if (!wasAwake) {
+      wakeUp();
+    }
+    
+    // Store original image and styling
+    const originalSrc = img.src;
+    const originalZIndex = img.style.zIndex;
+    
+    let sadImageSrc;
+    let sadMessage;
+    
+    if (currentFigure === 3) { // Chang - show fruit bowl
+      sadImageSrc = chrome.runtime.getURL("assets/Fruit_Bowl.png");
+      sadMessage = "Here kiddo, have some fresh fruit. It always makes me feel better when I'm down. Remember, this too shall pass.";
+    } else if (currentFigure === 1) { // Bill - show sad bill
+      sadImageSrc = chrome.runtime.getURL("assets/Sad_Bill.png");
+      sadMessage = "Aw kiddo, I'm sad too when you're sad. Come here, let's talk about it. You know dad's always here for you, right?";
+    } else { // Dave or other - use regular response
+      sadMessage = "Hey there, kiddo. I can see you're feeling down. Want to talk about what's bothering you? I'm here to listen.";
+      showSpeechBubble(sadMessage, 8000);
+      return; // No special image for Dave
+    }
+    
+    // Show special sad image
+    img.style.zIndex = "10001";
+    img.style.transition = 'transform 0.3s ease-out';
+    img.src = sadImageSrc;
+    img.style.transform = 'scale(1.2)';
+    
+    // Show speech bubble with sad message
+    showSpeechBubble(sadMessage, 8000);
+    
+    // Add voice synthesis for the sad message
+    chrome.storage.local.get(['voiceEnabled', 'elevenlabsApiKey'], async function(result) {
+      if (result.voiceEnabled && result.elevenlabsApiKey) {
+        try {
+          await textToSpeech(sadMessage, result.elevenlabsApiKey, currentFigure);
+        } catch (voiceError) {
+          console.error('Voice synthesis error for sad response:', voiceError);
+        }
+      }
+    });
+    
+    // Return to normal after 5 seconds
+    setTimeout(() => {
+      img.src = originalSrc;
+      img.style.transform = 'scale(1)';
+      img.style.zIndex = originalZIndex;
+      
+      // Go back to sleep if was sleeping
+      if (!wasAwake) {
+        setTimeout(() => {
+          goToSleep();
+        }, 2000);
+      }
+    }, 5000);
+    
+    console.log('Sad response complete');
+  } catch (error) {
+    console.error('Error triggering sad response:', error);
+  }
+}
+
+// Function to trigger sneeze animation and effects
+async function triggerSneeze() {
+  try {
+    // Only trigger if tab is visible/active
+    if (document.hidden || document.visibilityState !== 'visible') {
+      return;
+    }
+    
+    console.log('Sneeze triggered!');
+    
+    // Get current father figure for correct sneeze images
+    const result = await new Promise(resolve => {
+      chrome.storage.local.get(['fatherFigure'], resolve);
+    });
+    const currentFigure = result.fatherFigure || 1;
+    
+    // Wake up dad if sleeping
+    const wasAwake = isAwake;
+    if (!wasAwake) {
+      wakeUp();
+    }
+    
+    // Get sneeze images based on character
+    let sneezeImg1, sneezeImg2;
+    if (currentFigure === 1) { // Bill
+      sneezeImg1 = chrome.runtime.getURL("assets/Sneeze_.png");
+      sneezeImg2 = chrome.runtime.getURL("assets/Sneeze_.png");
+    } else if (currentFigure === 2) { // Dave
+      sneezeImg1 = chrome.runtime.getURL("assets/Sneeze_Dave.png");
+      sneezeImg2 = chrome.runtime.getURL("assets/Sneeze_Dave.png");
+    } else if (currentFigure === 3) { // Chang
+      sneezeImg1 = chrome.runtime.getURL("assets/Sneeze_Chang.png");
+      sneezeImg2 = chrome.runtime.getURL("assets/Sneeze_Chang.png");
+    }
+    
+    // Start screen shake effect
+    startScreenShake();
+    
+    // Play sneeze sound
+    playSneezeSound();
+    
+    // Animate sneeze images with enhanced visibility
+    const originalSrc = img.src;
+    const originalZIndex = img.style.zIndex;
+    
+    // Ensure dad stays visible during animation
+    img.style.zIndex = '99999';
+    img.style.position = 'fixed';
+    
+    // First sneeze frame - bigger enlargement
+    img.src = sneezeImg1;
+    img.style.transform = 'scale(1.5)';
+    img.style.transition = 'transform 0.1s ease-out';
+    
+    setTimeout(() => {
+      // Second sneeze frame - even bigger
+      img.src = sneezeImg2;
+      img.style.transform = 'scale(1.8)';
+    }, 200);
+    
+    setTimeout(() => {
+      // Third frame - maximum size
+      img.style.transform = 'scale(2.0)';
+    }, 400);
+    
+    setTimeout(() => {
+      // Back to normal
+      img.src = originalSrc;
+      img.style.transform = 'scale(1)';
+      img.style.transition = 'transform 0.3s ease-in';
+      img.style.zIndex = originalZIndex;
+      
+      // Stop screen shake
+      stopScreenShake();
+      
+      // Go back to sleep if was sleeping
+      if (!wasAwake) {
+        setTimeout(() => {
+          goToSleep();
+        }, 2000);
+      }
+    }, 1000);
+    
+    console.log('Sneeze animation complete');
+  } catch (error) {
+    console.error('Error triggering sneeze:', error);
+  }
+}
+
+// Function to play sneeze sound
+function playSneezeSound() {
+  try {
+    const audio = new Audio();
+    audio.volume = 0.6;
+    audio.src = chrome.runtime.getURL('assets/sneeze.mp3');
+    
+    audio.play().catch(error => {
+      console.log('Could not play sneeze sound:', error);
+    });
+    
+    // Clean up after playing
+    audio.addEventListener('ended', () => {
+      audio.remove();
+    });
+  } catch (error) {
+    console.log('Error creating sneeze audio:', error);
+  }
+}
+
+// Function to start screen shake effect
+function startScreenShake() {
+  const style = document.createElement('style');
+  style.id = 'sneeze-shake-style';
+  style.textContent = `
+    @keyframes sneezeShake {
+      0% { transform: translate(0px, 0px) rotate(0deg); }
+      10% { transform: translate(-2px, -1px) rotate(-0.5deg); }
+      20% { transform: translate(-1px, 0px) rotate(0.5deg); }
+      30% { transform: translate(1px, 1px) rotate(0deg); }
+      40% { transform: translate(1px, -1px) rotate(0.5deg); }
+      50% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+      60% { transform: translate(-1px, 0px) rotate(0deg); }
+      70% { transform: translate(1px, 1px) rotate(-0.5deg); }
+      80% { transform: translate(-1px, -1px) rotate(0.5deg); }
+      90% { transform: translate(1px, 1px) rotate(0deg); }
+      100% { transform: translate(0px, 0px) rotate(0deg); }
+    }
+    
+    .sneeze-shake {
+      animation: sneezeShake 0.8s ease-in-out;
+    }
+    
+    /* Ensure dad figure stays visible and stable during shake */
+    #father-figure-logo {
+      z-index: 99999 !important;
+      position: fixed !important;
+      transform-origin: center center !important;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Apply shake to body
+  document.body.classList.add('sneeze-shake');
+}
+
+// Function to stop screen shake effect
+function stopScreenShake() {
+  document.body.classList.remove('sneeze-shake');
+  
+  // Remove style after animation
+  setTimeout(() => {
+    const shakeStyle = document.getElementById('sneeze-shake-style');
+    if (shakeStyle) {
+      shakeStyle.remove();
+    }
+  }, 1000);
+}
+
+// Function to start sneeze timer
+function startSneezeTimer() {
+  console.log('Starting sneeze timer for', SNEEZE_INTERVAL / 1000, 'seconds');
+  
+  // Clear existing timer
+  if (sneezeTimer) {
+    clearTimeout(sneezeTimer);
+  }
+  
+  // Set timer for 5 minutes with random chance
+  sneezeTimer = setTimeout(() => {
+    console.log('Sneeze timer triggered!');
+    
+    // 30% chance to sneeze when timer triggers
+    if (Math.random() < 0.3) {
+      queueSpeechAction(() => triggerSneeze(), 'Sneeze', 'high');
+    }
+    
+    // Restart timer for next potential sneeze
+    startSneezeTimer();
+  }, SNEEZE_INTERVAL);
+}
+
+// Chess game implementation
+function createChessGame() {
+  // Get current father figure for dad image
+  chrome.storage.local.get(['fatherFigure'], function(result) {
+    const currentFigure = result.fatherFigure || 1;
+    const dadImages = {
+      1: chrome.runtime.getURL("assets/newbill1.png"),
+      2: chrome.runtime.getURL("assets/dave.png"), 
+      3: chrome.runtime.getURL("assets/chang.png")
+    };
+    
+    // Create chess overlay
+    const chessOverlay = document.createElement('div');
+    chessOverlay.id = 'chess-game-overlay';
+    chessOverlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 100000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Courier New', monospace;
+    `;
+
+    chessOverlay.innerHTML = `
+      <div style="background: #2c3e50; border-radius: 15px; padding: 20px; max-width: 700px; width: 90%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="${dadImages[currentFigure]}" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid white;" alt="Dad">
+            <h2 style="color: white; margin: 0; font-size: 24px;">♟️ Chess with Dad</h2>
+          </div>
+          <button id="chess-close" style="background: #e74c3c; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px;">×</button>
+        </div>
+        
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 320px;">
+            <div id="chess-board" style="
+              display: grid;
+              grid-template-columns: repeat(8, 40px);
+              grid-template-rows: repeat(8, 40px);
+              gap: 0;
+              border: 3px solid #34495e;
+              margin: 0 auto;
+              width: fit-content;
+            "></div>
+          </div>
+          
+          <div style="flex: 1; min-width: 200px; color: white;">
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+              <h3 style="margin: 0 0 10px 0; font-size: 16px;">Game Status</h3>
+              <div id="chess-status">Your turn (White)</div>
+              <div id="chess-captured" style="margin-top: 10px; font-size: 12px;">
+                <div>Captured: <span id="white-captured"></span></div>
+                <div>Dad captured: <span id="black-captured"></span></div>
+              </div>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+              <h3 style="margin: 0 0 10px 0; font-size: 16px;">Dad's Comments</h3>
+              <div id="dad-chess-comment" style="font-style: italic; font-size: 14px;">Ready to play, kiddo! Make your move.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(chessOverlay);
+    
+    // Initialize chess board
+    initializeChessBoard();
+    
+    // Add close button functionality
+    document.getElementById('chess-close').addEventListener('click', closeChessGame);
+    
+    isChessGameActive = true;
+    console.log('Chess game created with dad image');
+  });
+}
+
+function initializeChessBoard() {
+  const board = document.getElementById('chess-board');
+  
+  // Initial chess position
+  const initialBoard = [
+    ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+    ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+    ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+  ];
+  
+  // Chess piece symbols
+  const pieceSymbols = {
+    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+  };
+  
+  chessBoard = JSON.parse(JSON.stringify(initialBoard));
+  let selectedSquare = null;
+  
+  // Create board squares
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const square = document.createElement('div');
+      square.style.cssText = `
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        cursor: pointer;
+        user-select: none;
+        background: ${(row + col) % 2 === 0 ? '#f0d9b5' : '#b58863'};
+      `;
+      
+      square.dataset.row = row;
+      square.dataset.col = col;
+      
+      const piece = chessBoard[row][col];
+      if (piece) {
+        square.textContent = pieceSymbols[piece];
+      }
+      
+      square.addEventListener('click', () => handleSquareClick(row, col, square));
+      board.appendChild(square);
+    }
+  }
+  
+  function handleSquareClick(row, col, square) {
+    if (selectedSquare) {
+      // Try to move piece
+      const fromRow = selectedSquare.row;
+      const fromCol = selectedSquare.col;
+      
+      if (isValidMove(fromRow, fromCol, row, col)) {
+        makeMove(fromRow, fromCol, row, col);
+        selectedSquare.element.style.background = selectedSquare.originalColor;
+        selectedSquare = null;
+        
+        // Dad's turn after a short delay
+        setTimeout(() => {
+          makeDadMove();
+        }, 1000);
+      } else {
+        // Invalid move, deselect
+        selectedSquare.element.style.background = selectedSquare.originalColor;
+        selectedSquare = null;
+      }
+    } else {
+      // Select piece if it's player's piece (uppercase = white)
+      const piece = chessBoard[row][col];
+      if (piece && piece === piece.toUpperCase()) {
+        selectedSquare = {
+          row: row,
+          col: col,
+          element: square,
+          originalColor: square.style.background
+        };
+        square.style.background = '#ffff00';
+      }
+    }
+  }
+  
+  function isValidMove(fromRow, fromCol, toRow, toCol) {
+    // Basic validation - piece exists and not capturing own piece
+    const piece = chessBoard[fromRow][fromCol];
+    const target = chessBoard[toRow][toCol];
+    
+    if (!piece) return false;
+    if (target && piece.toUpperCase() === target.toUpperCase()) return false;
+    
+    // Simple move validation (basic rules)
+    const rowDiff = Math.abs(toRow - fromRow);
+    const colDiff = Math.abs(toCol - fromCol);
+    
+    switch (piece.toLowerCase()) {
+      case 'p': // Pawn
+        const direction = piece === 'P' ? -1 : 1;
+        const startRow = piece === 'P' ? 6 : 1;
+        
+        if (colDiff === 0) { // Forward move
+          if (target) return false; // Can't capture forward
+          if (rowDiff === 1 && toRow === fromRow + direction) return true;
+          if (rowDiff === 2 && fromRow === startRow && toRow === fromRow + 2 * direction) return true;
+        } else if (colDiff === 1 && rowDiff === 1) { // Diagonal capture
+          return target && toRow === fromRow + direction;
+        }
+        return false;
+        
+      case 'r': // Rook
+        return (rowDiff === 0 || colDiff === 0) && isPathClear(fromRow, fromCol, toRow, toCol);
+        
+      case 'n': // Knight
+        return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+        
+      case 'b': // Bishop
+        return rowDiff === colDiff && isPathClear(fromRow, fromCol, toRow, toCol);
+        
+      case 'q': // Queen
+        return ((rowDiff === 0 || colDiff === 0) || (rowDiff === colDiff)) && isPathClear(fromRow, fromCol, toRow, toCol);
+        
+      case 'k': // King
+        return rowDiff <= 1 && colDiff <= 1;
+        
+      default:
+        return false;
+    }
+  }
+  
+  function isPathClear(fromRow, fromCol, toRow, toCol) {
+    const rowStep = toRow > fromRow ? 1 : toRow < fromRow ? -1 : 0;
+    const colStep = toCol > fromCol ? 1 : toCol < fromCol ? -1 : 0;
+    
+    let currentRow = fromRow + rowStep;
+    let currentCol = fromCol + colStep;
+    
+    while (currentRow !== toRow || currentCol !== toCol) {
+      if (chessBoard[currentRow][currentCol]) return false;
+      currentRow += rowStep;
+      currentCol += colStep;
+    }
+    
+    return true;
+  }
+  
+  function makeMove(fromRow, fromCol, toRow, toCol) {
+    const piece = chessBoard[fromRow][fromCol];
+    const captured = chessBoard[toRow][toCol];
+    
+    // Update board state
+    chessBoard[toRow][toCol] = piece;
+    chessBoard[fromRow][fromCol] = null;
+    
+    // Update visual board
+    updateBoardDisplay();
+    
+    // Update captured pieces
+    if (captured) {
+      const capturedList = document.getElementById('black-captured');
+      capturedList.textContent += pieceSymbols[captured] + ' ';
+    }
+    
+    // Update status
+    document.getElementById('chess-status').textContent = "Dad's turn (Black)";
+  }
+  
+  function makeDadMove() {
+    // Simple AI: find a random valid move
+    const dadPieces = [];
+    
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = chessBoard[row][col];
+        if (piece && piece === piece.toLowerCase()) {
+          dadPieces.push({row, col, piece});
+        }
+      }
+    }
+    
+    // Try to find a valid move
+    for (let attempts = 0; attempts < 100; attempts++) {
+      const randomPiece = dadPieces[Math.floor(Math.random() * dadPieces.length)];
+      const toRow = Math.floor(Math.random() * 8);
+      const toCol = Math.floor(Math.random() * 8);
+      
+      if (isValidMove(randomPiece.row, randomPiece.col, toRow, toCol)) {
+        const captured = chessBoard[toRow][toCol];
+        
+        // Make dad's move
+        chessBoard[toRow][toCol] = randomPiece.piece;
+        chessBoard[randomPiece.row][randomPiece.col] = null;
+        
+        updateBoardDisplay();
+        
+        // Update captured pieces
+        if (captured) {
+          const capturedList = document.getElementById('white-captured');
+          capturedList.textContent += pieceSymbols[captured] + ' ';
+        }
+        
+        // Update status and dad comment
+        document.getElementById('chess-status').textContent = "Your turn (White)";
+        
+        const dadComments = [
+          "Nice move, kiddo! But watch this.",
+          "You're getting better at this!",
+          "That's my kid - always thinking ahead.",
+          "Hmm, interesting strategy there.",
+          "Let me show you how it's done!",
+          "You're keeping me on my toes!"
+        ];
+        
+        document.getElementById('dad-chess-comment').textContent = 
+          dadComments[Math.floor(Math.random() * dadComments.length)];
+        
+        break;
+      }
+    }
+  }
+  
+  function updateBoardDisplay() {
+    const squares = board.children;
+    for (let i = 0; i < squares.length; i++) {
+      const row = Math.floor(i / 8);
+      const col = i % 8;
+      const piece = chessBoard[row][col];
+      squares[i].textContent = piece ? pieceSymbols[piece] : '';
+    }
+  }
+}
+
+function closeChessGame() {
+  const overlay = document.getElementById('chess-game-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
+  isChessGameActive = false;
+  chessGame = null;
+  chessBoard = null;
+  console.log('Chess game closed');
+}
 
 // Function to get visible text content from the page
 function getScreenContent() {
@@ -341,7 +983,7 @@ function showSpeechBubble(text, duration = 8000) {
 }
 
 // Function to trigger random dad messages (cheer, advice, motivation)
-function triggerRandomDadMessage() {
+async function triggerRandomDadMessage() {
   try {
     // Only trigger if tab is visible/active
     if (document.hidden || document.visibilityState !== 'visible') {
@@ -394,9 +1036,9 @@ function startDadJokeTimer() {
     
     // 50% chance for dad joke, 50% chance for random dad message
     if (Math.random() < 0.5) {
-      triggerDadJoke();
+      queueSpeechAction(() => triggerDadJoke(), 'Dad Joke', 'normal');
     } else {
-      triggerRandomDadMessage();
+      queueSpeechAction(() => triggerRandomDadMessage(), 'Random Dad Message', 'normal');
     }
     
     // Restart timer for next joke/message
@@ -416,7 +1058,7 @@ function startVideoRecommendationTimer() {
   // Set timer for 3 minutes
   videoRecommendationTimer = setTimeout(() => {
     console.log('Video recommendation timer triggered!');
-    triggerVideoRecommendation();
+    queueSpeechAction(() => triggerVideoRecommendation(), 'Video Recommendation', 'normal');
     // Restart timer for next recommendation
     startVideoRecommendationTimer();
   }, VIDEO_RECOMMENDATION_INTERVAL);
@@ -646,7 +1288,7 @@ Please help me with this content and give me specific, practical advice as a car
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: needsScreenContext ? 150 : 100, // More tokens for help responses
+          maxOutputTokens: needsScreenContext ? 150 : 30, // Reduced tokens for dad jokes, more for help responses
         }
       })
     });
@@ -777,7 +1419,7 @@ function goToSleep() {
   startRandomSnoring();
 }
 
-// Keyboard listeners for '[' key (snoring) and ']' key (video)
+// Keyboard listeners for '[' key (snoring), ']' key (video), 's' key (sneeze), '\' key (sneeze), 'h' key (sad response), and ''' key (dad joke)
 document.addEventListener('keydown', function(e) {
   if (!e.ctrlKey && !e.metaKey && !e.altKey) {
     // Only trigger if not typing in an input field
@@ -786,6 +1428,17 @@ document.addEventListener('keydown', function(e) {
         playSnoring();
       } else if (e.key === ']') {
         triggerVideoRecommendation(true); // Force trigger
+      } else if (e.key === 's' || e.key === '\\') {
+        queueSpeechAction(() => triggerSneeze(), 'Manual Sneeze', 'high');
+      } else if (e.key === 'h') {
+        // Test sad response - get current figure and trigger
+        chrome.storage.local.get(['fatherFigure'], function(result) {
+          const currentFigure = result.fatherFigure || 1;
+          triggerSadResponse(currentFigure);
+        });
+      } else if (e.key === "'") {
+        // Trigger dad joke
+        queueSpeechAction(() => triggerDadJoke(true), 'Manual Dad Joke', 'high');
       }
     }
   }
@@ -1254,36 +1907,56 @@ img.addEventListener('click', function(e) {
           console.log('Full API URL:', `${GEMINI_API_URL}?key=${apiKey.substring(0, 10)}...`);
           
           if (!apiKey.startsWith('AIza')) {
-            addChatMessage('Dad', 'That doesn\'t look like a valid Gemini API key, sport. Should start with "AIza"');
+            addChatMessage('Dad', 'That doesn\'t look like a valid Google API key, kiddo. It should start with "AIza".');
             return;
           }
           
-          // Add user message
           addChatMessage('You', message);
           chatInput.value = '';
           
-          // Add thinking indicator
-          const thinkingMsg = addChatMessage('Dad', 'Thinking...');
+          // Check for sad response before processing normally
+          if (message.toLowerCase().includes("i'm sad") || message.toLowerCase().includes("im sad")) {
+            chrome.storage.local.get(['fatherFigure'], function(result) {
+              const currentFigure = result.fatherFigure || 1;
+              triggerSadResponse(currentFigure);
+            });
+            return;
+          }
+          
+          // Check for chess game request
+          if (message.toLowerCase().includes("let's play chess") || 
+              message.toLowerCase().includes("lets play chess") ||
+              message.toLowerCase().includes("play chess") ||
+              message.toLowerCase().includes("chess game")) {
+            addChatMessage('Dad', "Great idea, kiddo! Let's play some chess together. Opening the board now!");
+            setTimeout(() => {
+              createChessGame();
+            }, 1000);
+            return;
+          }
+          
+          const thinkingMsg = addChatMessage('Dad', '🤔 Thinking...');
           
           try {
             const response = await callGeminiAPI(message, apiKey);
-            // Remove thinking message and add real response
             thinkingMsg.remove();
             addChatMessage('Dad', response);
             
-            // If voice is enabled and ElevenLabs key is provided, speak the response
-            if (voiceEnabledCheckbox.checked && elevenlabsKeyInput.value) {
-              try {
-                // Get current father figure for voice selection
-                chrome.storage.local.get(['fatherFigure'], async function(result) {
-                  const currentFigure = result.fatherFigure || 1;
-                  await textToSpeech(response, elevenlabsKeyInput.value, currentFigure);
-                });
-              } catch (voiceError) {
-                console.error('Voice synthesis error:', voiceError);
-                addChatMessage('System', '🔇 Voice synthesis failed. Check your ElevenLabs API key.');
+            // Text-to-speech if enabled and ElevenLabs key is available
+            chrome.storage.local.get(['voiceEnabled'], async function(result) {
+              if (result.voiceEnabled && elevenlabsKeyInput.value) {
+                try {
+                  // Get current father figure for voice selection
+                  chrome.storage.local.get(['fatherFigure'], async function(result) {
+                    const currentFigure = result.fatherFigure || 1;
+                    await textToSpeech(response, elevenlabsKeyInput.value, currentFigure);
+                  });
+                } catch (voiceError) {
+                  console.error('Voice synthesis error:', voiceError);
+                  addChatMessage('System', '🔇 Voice synthesis failed. Check your ElevenLabs API key.');
+                }
               }
-            }
+            });
           } catch (error) {
             thinkingMsg.remove();
             addChatMessage('Dad', 'Sorry kiddo, something went wrong. Check that API key?');
@@ -1361,6 +2034,50 @@ async function checkIdleFeatures() {
     return;
   }
   
+  // Check tab count and warn if too many tabs are open
+  try {
+    chrome.tabs.query({}, function(tabs) {
+      if (tabs && tabs.length >= 15) {
+        const now = Date.now();
+        const timeSinceLastWarning = now - (window.lastTabWarningTime || 0);
+        
+        // Only warn once every 5 minutes
+        if (timeSinceLastWarning > 300000) {
+          window.lastTabWarningTime = now;
+          
+          const tabWarningMessages = [
+            `Whoa kiddo, you've got ${tabs.length} tabs open! That's a lot of digital real estate.`,
+            `Hey champ, ${tabs.length} tabs? Even I can't keep track of that many things at once!`,
+            `Kiddo, you've got ${tabs.length} tabs going - time to close some before your computer gets tired!`,
+            `${tabs.length} tabs open? That's more tabs than I have dad jokes! (And that's saying something)`,
+            `Sport, ${tabs.length} tabs is a lot. Maybe bookmark some and give your browser a break?`
+          ];
+          
+          const message = tabWarningMessages[Math.floor(Math.random() * tabWarningMessages.length)];
+          
+          // Wake up dad and show warning
+          const wasAwake = isAwake;
+          if (!wasAwake) {
+            wakeUp();
+          }
+          
+          showSpeechBubble(message, 8000);
+          
+          // Go back to sleep if was sleeping
+          if (!wasAwake) {
+            setTimeout(() => {
+              goToSleep();
+            }, 10000);
+          }
+          
+          console.log('Tab warning triggered:', message);
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error checking tab count:', error);
+  }
+  
   // Set up next check
   idleTimer = setTimeout(() => {
     checkIdleFeatures();
@@ -1378,14 +2095,19 @@ function setupActivityTracking() {
   // Start initial tracking
   trackActivity();
   
-  // Start dad joke timer and video recommendation timer
+  // Start dad joke timer, video recommendation timer, and sneeze timer
   console.log('Setting up activity tracking and starting timers');
   startDadJokeTimer();
   startVideoRecommendationTimer();
+  startSneezeTimer();
 }
 
-// Expose triggerDadJoke globally for popup access
+// Expose functions globally for popup access
 window.triggerDadJoke = triggerDadJoke;
+window.triggerSneeze = triggerSneeze;
+window.queueSpeechAction = queueSpeechAction;
+window.createChessGame = createChessGame;
+window.triggerSadResponse = triggerSadResponse;
 
 // 4. Append to the page with DOM ready check
 function addLogoToPage() {
