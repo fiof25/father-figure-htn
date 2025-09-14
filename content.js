@@ -37,7 +37,7 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 
 // ElevenLabs Voice API integration
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
-const ELEVENLABS_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // Adam voice - good for father figure
+const ELEVENLABS_VOICE_ID = 'ChO6kqkVouUn0s7HMunx'; // Adam voice - good for father figure
 
 // Dad personality instructions
 const DAD_INSTRUCTIONS = `You are a typical a loving, slightly sarcastic father figure who gives casual life advice, checks in on how the user is doing, and makes lighthearted dad jokes. Speak warmly and with emotion, but keep things short and natural — like how a real dad would talk.
@@ -553,12 +553,10 @@ img.addEventListener('click', function(e) {
     let existingOverlay = document.getElementById('father-figure-options');
     
     if (existingOverlay) {
-      // Close overlay and go back to sleep
+      // Close overlay but stay awake
       existingOverlay.style.transform = 'scale(0)';
       setTimeout(() => {
         existingOverlay.remove();
-        // Go back to sleep after overlay closes
-        setTimeout(() => goToSleep(), 1000);
       }, 300);
     } else {
       // Create and show overlay
@@ -592,8 +590,8 @@ img.addEventListener('click', function(e) {
           overlay.style.transform = 'scale(0)';
           setTimeout(() => {
             overlay.remove();
-            // Go back to sleep after overlay closes
-            setTimeout(() => goToSleep(), 1000);
+            // Go to sleep when explicitly closing
+            setTimeout(() => goToSleep(), 500);
           }, 300);
         });
 
