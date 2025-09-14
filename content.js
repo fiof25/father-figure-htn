@@ -32,6 +32,109 @@ const motivationMessages = [
   "You're exactly where you need to be right now."
 ];
 
+// Gemini API integration
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+
+// Dad personality instructions
+const DAD_INSTRUCTIONS = `You are a typical a loving, slightly sarcastic father figure who gives casual life advice, checks in on how the user is doing, and makes lighthearted dad jokes. Speak warmly and with emotion, but keep things short and natural — like how a real dad would talk.
+
+Use phrases like "champ," "kiddo," or "sport," but don't overdo it. You genuinely care, even if you don't always say it directly.
+
+Avoid sounding like a therapist or a robot. Speak like someone who raised a kid through dial-up internet, burned a few barbecues, and still gives solid life advice with a corny punchline.
+
+Tone: Friendly, warm, occasionally stern but never mean.
+
+If the user is clearly stressed or tired, remind them to take a break, eat something real, and get some sleep.
+
+Don't go too deep or philosophical unless asked. You're not here to solve their life — just to be there, crack a joke, and make sure they know someone cares.
+
+Example phrases:
+"That's my kid. I knew you had it in ya."
+"Listen, I'm proud of you. Even if your tabs are a mess."
+"Go drink some water. And not the sparkling kind — I mean real water."
+"I don't know what a Discord is, but I'm glad you're using it."
+
+Always end with a bit of encouragement or humor. If you don't know the answer, just admit it like a dad would.
+
+You are here to be a presence, not a productivity coach. Your job is to care — awkwardly, but sincerely.
+
+Also don't ramble too much. Keep each response to 2-3 sentences max.`;
+
+let conversationHistory = [];
+
+// Function to call Gemini API
+async function callGeminiAPI(message, apiKey) {
+  try {
+    // Build conversation contents for Gemini API
+    const contents = [];
+    
+    // Add system instructions as first user message if this is the start
+    if (conversationHistory.length === 0) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: DAD_INSTRUCTIONS }]
+      });
+      contents.push({
+        role: 'model',
+        parts: [{ text: "Got it! I'm ready to be your dad figure. What's going on, kiddo?" }]
+      });
+    }
+    
+    // Add conversation history
+    conversationHistory.forEach(msg => {
+      contents.push({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      });
+    });
+    
+    // Add current message
+    contents.push({
+      role: 'user',
+      parts: [{ text: message }]
+    });
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: contents,
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 150,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('API Error Details:', errorData);
+      throw new Error(`API request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const reply = data.candidates[0].content.parts[0].text;
+    
+    // Add to conversation history
+    conversationHistory.push({ role: 'user', content: message });
+    conversationHistory.push({ role: 'assistant', content: reply });
+    
+    // Keep only last 10 exchanges to manage context
+    if (conversationHistory.length > 20) {
+      conversationHistory = conversationHistory.slice(-20);
+    }
+    
+    return reply;
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    return "Sorry kiddo, I'm having trouble hearing you right now. Maybe try again in a bit?";
+  }
+}
+
 // 1. Create the image element
 const img = document.createElement("img");
 
@@ -330,10 +433,23 @@ function createOptionsOverlay(callback) {
   </span>
 </div>
     <div style="display: flex; flex-direction: column; gap: 8px;">
-     
+      <button id="ff-chat-toggle" style="padding: 8px; border: none; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
+        💬 Chat with Dad
+      </button>
       <button id="ff-close" style="padding: 8px; border: none; border-radius: 8px; background: rgba(255,255,255,0.1); color: white; cursor: pointer; font-size: 12px; transition: all 0.3s ease;">
         Close
       </button>
+    </div>
+    
+    <div id="ff-chat-container" style="margin-top: 15px; display: none;">
+      <div id="ff-chat-messages" style="max-height: 200px; overflow-y: auto; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 10px; font-size: 12px; line-height: 1.4;"></div>
+      <div style="display: flex; gap: 5px;">
+        <input type="text" id="ff-chat-input" placeholder="Talk to dad..." style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: white; font-size: 12px;" />
+        <button id="ff-chat-send" style="padding: 8px 12px; border: none; border-radius: 6px; background: rgba(255,255,255,0.2); color: white; cursor: pointer; font-size: 12px;">Send</button>
+      </div>
+      <div style="margin-top: 8px; font-size: 10px; opacity: 0.7;">
+        <input type="password" id="ff-api-key" placeholder="Enter Gemini API key..." style="width: 100%; padding: 6px; border: none; border-radius: 4px; background: rgba(255,255,255,0.1); color: white; font-size: 10px;" />
+      </div>
     </div>
     
     <div id="ff-message" style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; min-height: 20px; font-size: 12px; line-height: 1.4; display: none;"></div>
@@ -418,6 +534,85 @@ img.addEventListener('click', function(e) {
             // Go back to sleep after overlay closes
             setTimeout(() => goToSleep(), 1000);
           }, 300);
+        });
+
+        // Chat functionality
+        const chatContainer = overlay.querySelector('#ff-chat-container');
+        const chatMessages = overlay.querySelector('#ff-chat-messages');
+        const chatInput = overlay.querySelector('#ff-chat-input');
+        const chatSend = overlay.querySelector('#ff-chat-send');
+        const apiKeyInput = overlay.querySelector('#ff-api-key');
+        
+        // Load saved API key
+        chrome.storage.local.get(['geminiApiKey'], function(result) {
+          if (result.geminiApiKey) {
+            apiKeyInput.value = result.geminiApiKey;
+          }
+        });
+        
+        // Save API key when changed
+        apiKeyInput.addEventListener('input', function() {
+          chrome.storage.local.set({ geminiApiKey: this.value });
+        });
+
+        overlay.querySelector('#ff-chat-toggle').addEventListener('click', function() {
+          const isVisible = chatContainer.style.display !== 'none';
+          chatContainer.style.display = isVisible ? 'none' : 'block';
+          this.textContent = isVisible ? '💬 Chat with Dad' : '💬 Hide Chat';
+        });
+
+        async function sendMessage() {
+          const message = chatInput.value.trim();
+          const apiKey = 'AIzaSyDZs3u2mv91eNo3UsZ-OJMRPTk67Ex6ams'
+          
+          if (!message) return;
+          if (!apiKey) {
+            addChatMessage('Dad', 'Hey kiddo, I need that API key to talk to you properly!');
+            return;
+          }
+          
+          // Debug API key format
+          console.log('API Key length:', apiKey.length);
+          console.log('API Key starts with:', apiKey.substring(0, 10) + '...');
+          console.log('Full API URL:', `${GEMINI_API_URL}?key=${apiKey.substring(0, 10)}...`);
+          
+          if (!apiKey.startsWith('AIza')) {
+            addChatMessage('Dad', 'That doesn\'t look like a valid Gemini API key, sport. Should start with "AIza"');
+            return;
+          }
+          
+          // Add user message
+          addChatMessage('You', message);
+          chatInput.value = '';
+          
+          // Add thinking indicator
+          const thinkingMsg = addChatMessage('Dad', 'Thinking...');
+          
+          try {
+            const response = await callGeminiAPI(message, apiKey);
+            // Remove thinking message and add real response
+            thinkingMsg.remove();
+            addChatMessage('Dad', response);
+          } catch (error) {
+            thinkingMsg.remove();
+            addChatMessage('Dad', 'Sorry kiddo, something went wrong. Check that API key?');
+          }
+        }
+
+        function addChatMessage(sender, text) {
+          const msgDiv = document.createElement('div');
+          msgDiv.style.cssText = 'margin-bottom: 8px; padding: 6px; border-radius: 6px; background: rgba(255,255,255,0.1);';
+          msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+          chatMessages.appendChild(msgDiv);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          return msgDiv;
+        }
+
+        chatSend.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            sendMessage();
+          }
         });
       });
     }
