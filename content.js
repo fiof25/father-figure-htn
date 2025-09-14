@@ -553,6 +553,27 @@ function showMessage(text, messageDiv) {
   }, 5000);
 }
 
+function resetActivityTimer() {
+  lastActivityTime = Date.now();
+  
+  // Clear existing timer
+  if (autoSleepTimer) {
+    clearTimeout(autoSleepTimer);
+  }
+  
+  // Set new timer - but only if overlay is open
+  const existingOverlay = document.getElementById('father-figure-options');
+  if (existingOverlay) {
+    autoSleepTimer = setTimeout(() => {
+      // Only auto-sleep if no overlay is open and currently awake
+      const currentOverlay = document.getElementById('father-figure-options');
+      if (!currentOverlay && isAwake) {
+        goToSleep();
+      }
+    }, INACTIVITY_TIMEOUT);
+  }
+}
+
 // Click handler for the logo (only trigger if not dragging)
 img.addEventListener('click', function(e) {
   if (!isDragging) {
@@ -562,10 +583,12 @@ img.addEventListener('click', function(e) {
     let existingOverlay = document.getElementById('father-figure-options');
     
     if (existingOverlay) {
-      // Close overlay but stay awake
+      // Close overlay and go to sleep
       existingOverlay.style.transform = 'scale(0)';
       setTimeout(() => {
         existingOverlay.remove();
+        // Go to sleep after overlay closes
+        setTimeout(() => goToSleep(), 500);
       }, 300);
     } else {
       // Create and show overlay
@@ -769,6 +792,30 @@ img.addEventListener('click', function(e) {
             sendMessage();
           }
         });
+
+        // Add click-outside detection to close overlay and sleep
+        function handleClickOutside(event) {
+          const overlay = document.getElementById('father-figure-options');
+          const fatherFigure = document.getElementById('father-figure-logo');
+          
+          if (overlay && !overlay.contains(event.target) && !fatherFigure.contains(event.target)) {
+            // Click was outside both overlay and father figure
+            overlay.style.transform = 'scale(0)';
+            setTimeout(() => {
+              overlay.remove();
+              // Go to sleep after closing from outside click
+              setTimeout(() => goToSleep(), 500);
+            }, 300);
+            
+            // Remove the event listener
+            document.removeEventListener('click', handleClickOutside);
+          }
+        }
+        
+        // Add click-outside listener after a short delay to avoid immediate trigger
+        setTimeout(() => {
+          document.addEventListener('click', handleClickOutside);
+        }, 100);
       });
     }
   }
