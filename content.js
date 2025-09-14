@@ -64,7 +64,7 @@ Example phrases:
 "Reminds me of when I coached your little league team - you've got that same fire!"
 
 dont talk about rotary phones
-dont use asteriks 
+dont use asterisks 
 
 Always end with encouragement or humor. Keep responses to 2-3 sentences max.`,
 
@@ -85,14 +85,14 @@ Example phrases:
 "You know what? That reminds me of something wonderful you did last week."
 
 dont talk about rotary phones
-dont use asteriks 
+dont use asterisks in your responses
 
 Always end with gentle encouragement. Keep responses to 2-3 sentences max.`,
 
   3: `You are Chang - an Asian dad who combines traditional wisdom with modern understanding. You care deeply but express it through practical advice and gentle guidance. You have high standards but are supportive, and you blend cultural wisdom with dad humor.
 
 YOU ARE NOT AN AI. YOU ARE A HUMAN.
-Don't output asterisks
+dont use asterisks in your responses
 
 If you are asked to "help" with something, DONT ask follow up questions. Just give a response
 
@@ -106,7 +106,7 @@ Example phrases:
 "You're doing well, just remember balance is important in everything."
 
 dont talk about rotary phones
-dont use asteriks 
+dont use asterisks in your responses
 
 Always end with practical wisdom or gentle humor. Keep responses to 2-3 sentences max.`
 };
@@ -123,6 +123,8 @@ let idleTimer = null;
 let dadJokeTimer = null;
 let lastJokeTime = 0;
 let lastActivityTime = Date.now();
+let snoringTimer = null;
+let currentSnoringAudio = null;
 const IDLE_TIMEOUT = 30000; // 30 seconds of inactivity
 const JOKE_INTERVAL = 120000; // 2 minutes between dad jokes
 
@@ -136,6 +138,7 @@ If the content is about:
 - News: Light, non-political observational humor
 - Entertainment: Jokes about shows, games, or content
 - General: Classic dad puns and wordplay
+make sure to dont use asterisks in your responses
 
 IMPORTANT: Keep it to 2 sentences maximum. This is a quick dad comment, not a speech.
 
@@ -617,13 +620,11 @@ function startSleepAnimation() {
 
 function wakeUp() {
   isAwake = true;
-  if (sleepInterval) {
-    clearInterval(sleepInterval);
-  }
   img.src = dadAwakeSrc;
-  // Resize logo specifically
+  // Resize awake images specifically
   img.style.width = "190px";
   img.style.height = "190px";
+  stopRandomSnoring();
 }
 
 function goToSleep() {
@@ -634,6 +635,106 @@ function goToSleep() {
   img.style.width = "210px";
   img.style.height = "210px";
   startSleepAnimation();
+  startRandomSnoring();
+}
+
+// Keyboard listener for 's' key to trigger snoring
+document.addEventListener('keydown', function(e) {
+  if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    // Only trigger if not typing in an input field
+    if (!['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+      playSnoring();
+    }
+  }
+});
+
+// Random snoring functionality
+function startRandomSnoring() {
+  if (snoringTimer) {
+    clearTimeout(snoringTimer);
+  }
+  
+  function scheduleNextSnore() {
+    // Random interval between 10-30 seconds
+    const randomDelay = Math.random() * 20000 + 10000;
+    
+    snoringTimer = setTimeout(() => {
+      // Only snore if still sleeping
+      if (!isAwake) {
+        playSnoring();
+        scheduleNextSnore();
+      }
+    }, randomDelay);
+  }
+  
+  scheduleNextSnore();
+}
+
+function stopRandomSnoring() {
+  if (snoringTimer) {
+    clearTimeout(snoringTimer);
+    snoringTimer = null;
+  }
+  
+  // Stop any currently playing snoring audio
+  if (currentSnoringAudio && !currentSnoringAudio.paused) {
+    currentSnoringAudio.pause();
+    currentSnoringAudio.currentTime = 0;
+    currentSnoringAudio = null;
+  }
+}
+
+function playSnoring() {
+  try {
+    // Only play audio if tab is visible/active
+    if (document.hidden || document.visibilityState !== 'visible') {
+      console.log('Tab not active, skipping snoring sound');
+      return;
+    }
+    
+    // Stop any existing snoring audio first
+    if (currentSnoringAudio && !currentSnoringAudio.paused) {
+      currentSnoringAudio.pause();
+      currentSnoringAudio.currentTime = 0;
+    }
+    
+    // Create audio element and set source
+    const audio = new Audio();
+    audio.volume = 0.3; // Keep it subtle
+    audio.preload = 'auto';
+    currentSnoringAudio = audio; // Store reference for stopping
+    
+    // Set the source using chrome.runtime.getURL
+    audio.src = chrome.runtime.getURL('assets/malesnoring.mp3');
+    
+    // Play with error handling
+    audio.play().catch(error => {
+      console.log('Could not play snoring sound:', error);
+    });
+    
+    // Stop audio after 10 seconds
+    setTimeout(() => {
+      if (!audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      if (currentSnoringAudio === audio) {
+        currentSnoringAudio = null;
+      }
+      audio.remove();
+    }, 10000);
+    
+    // Clean up after playing naturally ends
+    audio.addEventListener('ended', () => {
+      if (currentSnoringAudio === audio) {
+        currentSnoringAudio = null;
+      }
+      audio.remove();
+    });
+    
+  } catch (error) {
+    console.log('Error creating snoring audio:', error);
+  }
 }
 
 // 3. Style it to stay at the bottom-right and make it clickable
@@ -919,8 +1020,11 @@ function resetActivityTimer() {
 // Click handler for the logo (only trigger if not dragging)
 img.addEventListener('click', function(e) {
   if (!isDragging) {
-    // Wake up Bill when clicked
-    wakeUp();
+    // Wake up when clicked (stops snoring if sleeping)
+    if (!isAwake) {
+      wakeUp();
+      return; // Just wake up, don't show overlay when sleeping
+    }
     
     let existingOverlay = document.getElementById('father-figure-options');
     
