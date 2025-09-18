@@ -16,6 +16,7 @@ Me and Richard Li DAD-icated a LOT of time in the 32 hours at Hack the North, so
 <img width="1152" height="1326" alt="image" src="https://github.com/user-attachments/assets/325928fb-0788-49f1-b193-76e0e6d6eb7c" />
 
 <img width="2466" height="1570" alt="image" src="https://github.com/user-attachments/assets/659a2381-0550-4cd9-b9f4-9529b49c9fd4" />
+^ Photo description: Father Figure reads the screen of a user making a slideshow and gives advice on the slideshow
 <img width="742" height="946" alt="image" src="https://github.com/user-attachments/assets/7e9d1c8b-cf75-4fc2-a6dc-4536e4df4a91" />
 
 
