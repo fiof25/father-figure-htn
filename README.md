@@ -37,7 +37,8 @@ Used Gemini AI to generate conversation and different personalities + ElevenLabs
 Challenges we ran into but conquered successfully 🥊
 Format... we weren't sure how we would display things to ensure convenience and seamlessness, but thank goodness it all worked out
 Timing the animation and audio correctly for maximum dad-ness 😅
-Accomplishments that our fathers are proud of us for 👏
+
+### Accomplishments that our fathers are proud of us for 👏
 Cute and charming animations to spice up your browser 😉
 Connecting to the APIs despite some security issues...
 Getting into this hackathon in the first place
