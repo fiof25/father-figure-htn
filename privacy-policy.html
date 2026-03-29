@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Father Figure - Privacy Policy</title>
+  <style>
+    body {
+      font-family: Georgia, serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      color: #333;
+      line-height: 1.7;
+    }
+    h1 { font-size: 2em; margin-bottom: 0.2em; }
+    h2 { font-size: 1.3em; margin-top: 2em; border-bottom: 1px solid #ddd; padding-bottom: 0.3em; }
+    p, li { margin: 0.6em 0; }
+    ul { padding-left: 1.5em; }
+    .updated { color: #888; font-size: 0.9em; }
+    a { color: #4a6fa5; }
+  </style>
+</head>
+<body>
+
+  <h1>Father Figure &mdash; Privacy Policy</h1>
+  <p class="updated">Last updated: March 24, 2026</p>
+
+  <p>Father Figure is a Chrome browser extension that provides motivational messages, dad jokes, and fatherly advice through AI-generated responses and text-to-speech. This policy explains what data is collected, how it is used, and your choices.</p>
+
+  <h2>1. Data We Collect</h2>
+  <ul>
+    <li><strong>API keys you provide:</strong> If you enter a Gemini API key or ElevenLabs API key, these are stored locally on your device using <code>chrome.storage.local</code>. They are never sent to our servers.</li>
+    <li><strong>Your preferences:</strong> Your selected father figure character is stored locally on your device.</li>
+    <li><strong>Page content and messages:</strong> When you interact with the extension (e.g., ask a question or request advice), the text of your message or selected page content may be sent to third-party AI services to generate a response. See Section 3.</li>
+  </ul>
+
+  <h2>2. Data We Do NOT Collect</h2>
+  <ul>
+    <li>We do not operate any servers or databases.</li>
+    <li>We do not collect, store, or transmit your browsing history.</li>
+    <li>We do not collect personally identifiable information.</li>
+    <li>We do not use analytics or tracking of any kind.</li>
+  </ul>
+
+  <h2>3. Third-Party Services</h2>
+  <p>Father Figure uses the following third-party APIs to provide its features. When you use these features, your input is sent directly from your browser to the respective service under their own privacy policies:</p>
+  <ul>
+    <li>
+      <strong>Google Gemini API</strong> &mdash; Used to generate AI responses, dad jokes, and personalized advice. Your messages are sent to Google's servers using the API key you provide.
+      <br><a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a>
+    </li>
+    <li>
+      <strong>ElevenLabs Text-to-Speech API</strong> &mdash; Used to convert generated text into spoken audio. Text is sent to ElevenLabs' servers using the API key you provide.
+      <br><a href="https://elevenlabs.io/privacy" target="_blank">ElevenLabs Privacy Policy</a>
+    </li>
+  </ul>
+  <p>We encourage you to review the privacy policies of these services. We do not control how they handle data sent to their APIs.</p>
+
+  <h2>4. Permissions</h2>
+  <p>Father Figure requests the following Chrome permissions:</p>
+  <ul>
+    <li><strong>activeTab / scripting:</strong> Required to display the father figure overlay and interact with the current page.</li>
+    <li><strong>storage:</strong> Used to save your character selection and API keys locally on your device.</li>
+    <li><strong>tabs:</strong> Used to trigger actions (such as dad jokes) on the currently active tab from the popup.</li>
+    <li><strong>Access to all websites (<code>&lt;all_urls&gt;</code>):</strong> The extension runs on all pages so the father figure can appear and offer encouragement regardless of what site you are visiting. No page content is collected or transmitted without a direct user interaction.</li>
+  </ul>
+
+  <h2>5. Data Storage and Security</h2>
+  <p>All data stored by the extension (API keys, preferences) is kept in <code>chrome.storage.local</code> on your own device. It is not synced to the cloud and is not accessible to us. You can remove all stored data at any time by uninstalling the extension or clearing its storage via Chrome's extension settings.</p>
+
+  <h2>6. Children's Privacy</h2>
+  <p>Father Figure is not directed at children under 13. We do not knowingly collect any information from children.</p>
+
+  <h2>7. Changes to This Policy</h2>
+  <p>We may update this privacy policy from time to time. The "Last updated" date at the top of this page will reflect any changes. Continued use of the extension after changes constitutes acceptance of the updated policy.</p>
+
+  <h2>8. Contact</h2>
+  <p>If you have any questions about this privacy policy, please open an issue on our <a href="https://github.com/richardli/father-figure-htn" target="_blank">GitHub repository</a>.</p>
+
+</body>
+</html>

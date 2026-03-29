@@ -882,6 +882,16 @@ async function textToSpeech(text, apiKey, fatherFigure = 1) {
   }
 }
 
+// Browser speech synthesis fallback (no API key required)
+function speakWithBrowser(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text.replace(/\*/g, ''));
+  utterance.rate = 0.95;
+  utterance.pitch = 1.0;
+  window.speechSynthesis.speak(utterance);
+}
+
 // Function to generate dad joke based on screen content
 async function generateDadJoke(apiKey) {
   try {
@@ -1085,7 +1095,7 @@ async function triggerDadJoke(force = false) {
       chrome.storage.local.get(['geminiApiKey', 'elevenlabsApiKey', 'voiceEnabled', 'fatherFigure'], resolve);
     });
     
-    const apiKey = result.geminiApiKey || 'AIzaSyDZs3u2mv91eNo3UsZ-OJMRPTk67Ex6ams';
+    const apiKey = result.geminiApiKey;
     if (!apiKey) {
       console.log('No API key available for dad jokes');
       return;
@@ -1101,15 +1111,18 @@ async function triggerDadJoke(force = false) {
     const joke = await generateDadJoke(apiKey);
     showSpeechBubble(joke);
     
-    // If voice is enabled and ElevenLabs key is available, speak the joke
-    if (result.voiceEnabled && result.elevenlabsApiKey) {
-      try {
-        const currentFigure = result.fatherFigure || 1;
-        console.log('Speaking dad joke with voice...');
-        await textToSpeech(joke, result.elevenlabsApiKey, currentFigure);
-      } catch (voiceError) {
-        console.error('Voice synthesis error for dad joke:', voiceError);
-        // Don't show error to user for automatic jokes, just log it
+    // If voice is enabled, speak the joke (ElevenLabs or browser fallback)
+    if (result.voiceEnabled) {
+      if (result.elevenlabsApiKey) {
+        try {
+          const currentFigure = result.fatherFigure || 1;
+          await textToSpeech(joke, result.elevenlabsApiKey, currentFigure);
+        } catch (voiceError) {
+          console.error('Voice synthesis error for dad joke:', voiceError);
+          speakWithBrowser(joke);
+        }
+      } else {
+        speakWithBrowser(joke);
       }
     }
     
@@ -1910,18 +1923,13 @@ img.addEventListener('click', function(e) {
 
         async function sendMessage() {
           const message = chatInput.value.trim();
-          const apiKey = apiKeyInput.value || 'AIzaSyDZs3u2mv91eNo3UsZ-OJMRPTk67Ex6ams'
+          const apiKey = apiKeyInput.value
           
           if (!message) return;
           if (!apiKey) {
             addChatMessage('Dad', 'Hey kiddo, I need that API key to talk to you properly!');
             return;
           }
-          
-          // Debug API key format
-          console.log('API Key length:', apiKey.length);
-          console.log('API Key starts with:', apiKey.substring(0, 10) + '...');
-          console.log('Full API URL:', `${GEMINI_API_URL}?key=${apiKey.substring(0, 10)}...`);
           
           if (!apiKey.startsWith('AIza')) {
             addChatMessage('Dad', 'That doesn\'t look like a valid Google API key, kiddo. It should start with "AIza".');
@@ -1959,19 +1967,19 @@ img.addEventListener('click', function(e) {
             thinkingMsg.remove();
             addChatMessage('Dad', response);
             
-            // Text-to-speech if enabled and ElevenLabs key is available
-            chrome.storage.local.get(['voiceEnabled'], async function(result) {
-              if (result.voiceEnabled && elevenlabsKeyInput.value) {
+            // Text-to-speech if enabled
+            chrome.storage.local.get(['voiceEnabled', 'fatherFigure'], async function(result) {
+              if (!result.voiceEnabled) return;
+              if (elevenlabsKeyInput.value) {
                 try {
-                  // Get current father figure for voice selection
-                  chrome.storage.local.get(['fatherFigure'], async function(result) {
-                    const currentFigure = result.fatherFigure || 1;
-                    await textToSpeech(response, elevenlabsKeyInput.value, currentFigure);
-                  });
+                  const currentFigure = result.fatherFigure || 1;
+                  await textToSpeech(response, elevenlabsKeyInput.value, currentFigure);
                 } catch (voiceError) {
                   console.error('Voice synthesis error:', voiceError);
-                  addChatMessage('System', '🔇 Voice synthesis failed. Check your ElevenLabs API key.');
+                  speakWithBrowser(response);
                 }
+              } else {
+                speakWithBrowser(response);
               }
             });
           } catch (error) {
