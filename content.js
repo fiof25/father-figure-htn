@@ -133,7 +133,6 @@ const IDLE_TIMEOUT = 30000; // 30 seconds of inactivity
 const JOKE_INTERVAL = 120000; // 2 minutes between dad jokes
 const VIDEO_RECOMMENDATION_INTERVAL = 180000; // 3 minutes between video recommendations
 const SNEEZE_INTERVAL = 300000; // 5 minutes between random sneezes
-const YOUTUBE_VIDEO_URL = 'https://youtu.be/MtN1YnoL46Q?si=PdE4rfCWIMx7mN5n';
 
 // Speech action queue system
 let speechQueue = [];
@@ -1195,10 +1194,6 @@ async function triggerVideoRecommendation(force = false) {
     // Show speech bubble with video recommendation after voice starts
     const bubble = showSpeechBubble(message, 5000);
     
-    // Automatically open the video after a short delay
-    setTimeout(() => {
-      window.open(YOUTUBE_VIDEO_URL, '_blank');
-    }, 2000); // Open video after 2 seconds
     
     // Go back to sleep after a delay if dad was sleeping
     if (!wasAwake) {

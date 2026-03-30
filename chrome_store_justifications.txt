@@ -1,0 +1,26 @@
+Chrome Web Store – Privacy Practices Justifications
+=====================================================
+
+activeTab
+---------
+The activeTab permission is used to access the content of the currently active browser tab so the extension can read the page context and display relevant fatherly advice and motivational messages to the user based on what they are currently viewing.
+
+Host Permissions (generativelanguage.googleapis.com, api.elevenlabs.io)
+-----------------------------------------------------------------------
+Host permissions for generativelanguage.googleapis.com and api.elevenlabs.io are required to enable the extension's core AI features. The extension sends user-provided text to the Google Gemini API to generate personalized fatherly advice, and to the ElevenLabs API to convert that advice into voice audio. No user data is stored or shared beyond what is necessary to fulfill these API requests.
+
+Remote Code
+-----------
+The extension does not execute any remote code. All JavaScript logic is bundled locally within the extension package. External API calls (Gemini, ElevenLabs) are used solely to retrieve text and audio responses, not to fetch or execute scripts.
+
+Scripting
+---------
+The scripting permission is used to inject the content script into web pages so the extension can display fatherly message overlays and interact with the page UI in response to user actions. No scripts are injected for tracking or data collection purposes.
+
+Storage
+-------
+The storage permission is used to save the user's selected father figure character and their personal Google Gemini and ElevenLabs API keys locally on their device. This data is stored only in the browser's local storage and is never transmitted to any third-party server other than the respective API endpoints during normal usage.
+
+Tabs
+----
+The tabs permission is used to identify the currently active tab so the extension can apply fatherly messages and context-aware advice to the correct page. It is not used to track browsing history or monitor tab activity beyond what is needed to deliver the extension's core functionality.
