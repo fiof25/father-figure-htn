@@ -1986,7 +1986,8 @@ img.addEventListener('click', function(e) {
         function addChatMessage(sender, text) {
           const msgDiv = document.createElement('div');
           msgDiv.style.cssText = 'margin-bottom: 8px; padding: 6px; border-radius: 6px; background: rgba(255,255,255,0.1);';
-          msgDiv.innerHTML = `<strong>${sender}:</strong> ${text}`;
+          msgDiv.innerHTML = `<strong>${sender}:</strong> `;
+          msgDiv.appendChild(document.createTextNode(text));
           chatMessages.appendChild(msgDiv);
           chatMessages.scrollTop = chatMessages.scrollHeight;
           return msgDiv;
